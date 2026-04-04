@@ -59,7 +59,7 @@
         discord
         wezterm
         rustup
-        mold-wrapped
+        mold
         openssl.dev
         pkg-config
         just
@@ -98,8 +98,9 @@
       # home-manager settings
       programs.git = {
         enable = true;
-        userName = "Threated";
-        userEmail = "jan2001.07@gmail.com";
+        signing.format = null;
+        settings.user.name = "Threated";
+        settings.user.email = "jan2001.07@gmail.com";
       };
       programs.jujutsu = {
         enable = true;

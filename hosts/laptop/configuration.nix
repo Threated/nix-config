@@ -56,8 +56,8 @@
       services.xserver.enable = true;
 
       # Enable the GNOME Desktop Environment.
-      services.xserver.displayManager.gdm.enable = true;
-      services.xserver.desktopManager.gnome.enable = true;
+      services.displayManager.gdm.enable = true;
+      services.desktopManager.gnome.enable = true;
       services.hardware.bolt.enable = true;
       services.xserver.excludePackages = [
         pkgs.xterm
@@ -130,9 +130,9 @@
           "networkmanager"
           "wheel"
         ];
-        shell = config.programs.fish.package;
-        ignoreShellProgramCheck = true;
+        shell = pkgs.fish;
       };
+      programs.fish.enable = true;
 
       # Allow unfree packages
       nixpkgs.config.allowUnfree = true;
