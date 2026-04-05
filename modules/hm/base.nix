@@ -19,6 +19,9 @@
   flake.homeModules.base =
     { pkgs, ... }:
     {
+      imports = [
+        self.homeModules.jj
+      ];
       # Home Manager needs a bit of information about you and the paths it should
       # manage.
       home.username = "threated";
@@ -101,15 +104,6 @@
         signing.format = null;
         settings.user.name = "Threated";
         settings.user.email = "jan2001.07@gmail.com";
-      };
-      programs.jujutsu = {
-        enable = true;
-        settings = {
-          user.name = "Threated";
-          user.email = "jan2001.07@gmail.com";
-          ui.editor = "vim";
-          ui.default-command = "log";
-        };
       };
       programs.wezterm.enable = true;
       programs.wezterm.extraConfig = ''
