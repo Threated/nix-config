@@ -4,6 +4,10 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
+    wrapper-modules.url = "github:BirdeeHub/nix-wrapper-modules";
+    wrapper-modules.inputs.nixpkgs.follows = "nixpkgs";
+    wrappers.url = "github:Lassulus/wrappers";
+    wrappers.inputs.nixpkgs.follows = "nixpkgs";
 
     home-manager = {
       url = "github:nix-community/home-manager";
@@ -22,6 +26,7 @@
         ./modules/hm/base.nix
         ./modules/hm/jj.nix
         ./modules/nix/hm.nix
+        ./modules/wrapped/jj.nix
       ];
     };
 }
