@@ -24,7 +24,6 @@
         inputs.home-manager.flakeModules.home-manager
         ./hosts/laptop/configuration.nix
         ./modules/hm/base.nix
-        ./modules/hm/jj.nix
         ./modules/nix/hm.nix
         ./modules/wrapped/jj.nix
       ];

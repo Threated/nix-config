@@ -19,9 +19,7 @@
   flake.homeModules.base =
     { pkgs, ... }:
     {
-      imports = [
-        self.homeModules.jj
-      ];
+      imports = [ ];
       # Home Manager needs a bit of information about you and the paths it should
       # manage.
       home.username = "threated";
@@ -78,6 +76,7 @@
         zulip
         gdb
         dolphin-emu
+        self.packages.${pkgs.stdenv.hostPlatform.system}.jj
       ];
 
       # Home Manager is pretty good at managing dotfiles. The primary way to manage
