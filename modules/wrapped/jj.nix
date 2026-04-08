@@ -51,7 +51,7 @@
           '';
         };
       };
-      packages.jjui = inputs.wrappers.lib.wrapPackage (
+      packages.jjui = inputs.wrapper-modules.lib.wrapPackage (
         let
           from_git = pkgs.fetchurl {
             url = "https://raw.githubusercontent.com/idursun/jjui/main/internal/config/default/bindings.toml";

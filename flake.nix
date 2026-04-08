@@ -6,8 +6,6 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     wrapper-modules.url = "github:BirdeeHub/nix-wrapper-modules";
     wrapper-modules.inputs.nixpkgs.follows = "nixpkgs";
-    wrappers.url = "github:Lassulus/wrappers";
-    wrappers.inputs.nixpkgs.follows = "nixpkgs";
 
     home-manager = {
       url = "github:nix-community/home-manager";
