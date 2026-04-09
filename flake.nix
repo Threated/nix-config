@@ -25,6 +25,7 @@
         ./modules/nix/hm.nix
         ./modules/wrapped/jj.nix
         ./modules/wrapped/wezterm.nix
+        ./modules/wrapped/fish.nix
       ];
     };
 }

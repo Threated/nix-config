@@ -130,9 +130,9 @@
           "networkmanager"
           "wheel"
         ];
-        shell = pkgs.fish;
+        shell = self.packages.${pkgs.stdenv.hostPlatform.system}.fish;
       };
-      programs.fish.enable = true;
+      environment.shells = [ self.packages.${pkgs.stdenv.hostPlatform.system}.fish ];
 
       # Allow unfree packages
       nixpkgs.config.allowUnfree = true;

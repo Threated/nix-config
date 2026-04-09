@@ -77,6 +77,7 @@
         dolphin-emu
         self.packages.${pkgs.stdenv.hostPlatform.system}.jj
         self.packages.${pkgs.stdenv.hostPlatform.system}.wezterm
+        self.packages.${pkgs.stdenv.hostPlatform.system}.fish
       ];
 
       # Home Manager is pretty good at managing dotfiles. The primary way to manage
@@ -103,57 +104,6 @@
         signing.format = null;
         settings.user.name = "Threated";
         settings.user.email = "jan2001.07@gmail.com";
-      };
-      programs.fish = {
-        enable = true;
-        shellAliases = {
-          lsa = "ls -la";
-          cat = "bat";
-        };
-        shellInit = ''
-          set fish_greeting '''
-          bind ctrl-h backward-kill-word
-          bind ctrl-w backward-kill-word
-          function nosleep
-              set -l schema org.gnome.settings-daemon.plugins.power
-              set -l old_ac (gsettings get $schema sleep-inactive-ac-type)
-              set -l old_bat (gsettings get $schema sleep-inactive-battery-type)
-
-              gsettings set $schema sleep-inactive-ac-type "'nothing'"
-              gsettings set $schema sleep-inactive-battery-type "'nothing'"
-
-              systemd-inhibit --what=idle:sleep --why="temporary no sleep" sleep infinity &
-              set -l job (jobs --last --group)
-
-              function __nosleep_restore --on-job-exit $job --inherit-variable schema --inherit-variable old_ac --inherit-variable old_bat
-                  gsettings set $schema sleep-inactive-ac-type $old_ac
-                  gsettings set $schema sleep-inactive-battery-type $old_bat
-                  functions -e __nosleep_restore
-              end
-
-              fg $job
-          end
-        '';
-      };
-      programs.starship = {
-        enableFishIntegration = true;
-        enable = true;
-        settings = {
-          # Starship config
-          format = "$all($satus)$line_break$character";
-          hostname.disabled = true;
-          status = {
-            symbol = " ";
-            success_symbol = "[➜ ](bold green)";
-            map_symbol = true;
-            sigint_symbol = "⚡";
-            disabled = false;
-            pipestatus = true;
-          };
-          container.disabled = true;
-          username.disabled = true;
-          git_branch.symbol = "⎇ ";
-        };
       };
     };
 }
