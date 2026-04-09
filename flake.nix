@@ -24,6 +24,7 @@
         ./modules/hm/base.nix
         ./modules/nix/hm.nix
         ./modules/wrapped/jj.nix
+        ./modules/wrapped/wezterm.nix
       ];
     };
 }
