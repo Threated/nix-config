@@ -55,7 +55,7 @@
         let
           from_git = pkgs.fetchurl {
             url = "https://raw.githubusercontent.com/idursun/jjui/main/internal/config/default/bindings.toml";
-            hash = "sha256-IINwkcJ6SkN7n2YOfdncSGPF4VdXF8hBYbVA+mGbuqs=";
+            hash = "sha256-zCmjMEkaiwcoNb/sX9LuT5LupXW/9SBsUFOaeF5sSEQ=";
           };
           base_keymap = fromTOML (builtins.readFile from_git);
           close_keymaps = builtins.filter (
