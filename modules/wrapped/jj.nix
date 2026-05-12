@@ -54,7 +54,7 @@
       packages.jjui = inputs.wrapper-modules.lib.wrapPackage (
         let
           from_git = pkgs.fetchurl {
-            url = "https://raw.githubusercontent.com/idursun/jjui/main/internal/config/default/bindings.toml";
+            url = "https://raw.githubusercontent.com/idursun/jjui/577b20190e23e802d6593af1865ceb22662208f3/internal/config/default/bindings.toml";
             hash = "sha256-zCmjMEkaiwcoNb/sX9LuT5LupXW/9SBsUFOaeF5sSEQ=";
           };
           base_keymap = fromTOML (builtins.readFile from_git);
