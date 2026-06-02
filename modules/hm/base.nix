@@ -72,7 +72,6 @@
         codex
         nil
         nixd
-        zulip
         gdb
         dolphin-emu
         self.packages.${pkgs.stdenv.hostPlatform.system}.jj
