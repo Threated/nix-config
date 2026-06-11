@@ -21,7 +21,7 @@
         {
           inherit pkgs;
           package = pkgs.fish;
-          extraPackages = [ self'.packages.starship ];
+          runtimePkgs = [ self'.packages.starship ];
           passthru.shellPath = "/bin/fish";
           flags = {
             "-C" = "source ${confFile}";

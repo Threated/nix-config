@@ -73,6 +73,7 @@
         nil
         nixd
         gdb
+        bun
         dolphin-emu
         self.packages.${pkgs.stdenv.hostPlatform.system}.jj
         self.packages.${pkgs.stdenv.hostPlatform.system}.wezterm
