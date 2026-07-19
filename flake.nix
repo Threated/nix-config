@@ -7,14 +7,18 @@
     wrapper-modules.url = "github:BirdeeHub/nix-wrapper-modules";
     wrapper-modules.inputs.nixpkgs.follows = "nixpkgs";
 
+    noctalia-greeter = {
+      url = "github:noctalia-dev/noctalia-greeter";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs =
-    inputs@{ flake-parts, ... }:
+  outputs = inputs@{ flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [ "x86_64-linux" ];
 
@@ -24,6 +28,8 @@
         ./modules/hm/base.nix
         ./modules/nix/hm.nix
         ./modules/wrapped/jj.nix
+        ./modules/wrapped/niri.nix
+        ./modules/wrapped/noctalia.nix
         ./modules/wrapped/wezterm.nix
         ./modules/wrapped/fish.nix
       ];
