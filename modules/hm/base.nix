@@ -69,7 +69,7 @@
         zed-editor
         neovim
         gemini-cli
-        codex
+        inputs.codex-cli-nix.packages.${pkgs.stdenv.hostPlatform.system}.default
         nil
         nixd
         gdb
