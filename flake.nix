@@ -43,6 +43,7 @@
         ./modules/wrapped/niri.nix
         ./modules/wrapped/noctalia.nix
         ./modules/wrapped/wezterm.nix
+        ./modules/wrapped/ghostty.nix
         ./modules/wrapped/fish.nix
       ];
     };

@@ -107,7 +107,7 @@
         ];
 
         binds = {
-          "Mod+Return".spawn-sh = lib.getExe self'.packages.wezterm;
+          "Mod+Return".spawn-sh = lib.getExe self'.packages.ghostty;
           "Mod+D".close-window = { };
           "Mod+Q".close-window = { };
 
