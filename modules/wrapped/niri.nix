@@ -59,6 +59,15 @@
       };
     };
 
+    # The greeter runs before Noctalia and otherwise retains the wallpaper that
+    # happened to be copied during its initial appearance sync. Point its cached
+    # wallpaper at the declarative wallpaper so it cannot become stale.
+    systemd.tmpfiles.settings."10-noctalia-greeter" = {
+      "/var/lib/noctalia-greeter/wallpaper.png"."L+" = {
+        argument = pkgs.nixos-artwork.wallpapers.simple-dark-gray.gnomeFilePath;
+      };
+    };
+
     # VT 1 contains the boot log. A dedicated, initially blank VT prevents it
     # from flashing while the greeter compositor hands DRM over to niri.
     services.greetd.settings.terminal.vt = lib.mkForce 7;
@@ -70,11 +79,6 @@
       settings = {
         spawn-at-startup = [
           (lib.getExe self'.packages.noctalia)
-          (lib.getExe (pkgs.writeShellScriptBin "wallpaper" ''
-            exec ${lib.getExe pkgs.swaybg} \
-              -i ${pkgs.nixos-artwork.wallpapers.simple-dark-gray.gnomeFilePath} \
-              -m fill
-          ''))
         ];
 
         hotkey-overlay.skip-at-startup = true;
@@ -86,6 +90,7 @@
         input.touchpad.natural-scroll = [ ];
 
         layout = {
+          background-color = "transparent";
           gaps = 5;
           focus-ring = {
             width = 2;
@@ -93,6 +98,13 @@
             inactive-color = "#565f8980";
           };
         };
+
+        layer-rules = [
+          {
+            matches = [ { namespace = "^noctalia-wallpaper"; } ];
+            place-within-backdrop = true;
+          }
+        ];
 
         binds = {
           "Mod+Return".spawn-sh = lib.getExe self'.packages.wezterm;
@@ -109,7 +121,7 @@
           "Mod+Down".focus-window-down = { };
 
           "Mod+Ctrl+L".spawn-sh =
-            "${lib.getExe self'.packages.noctalia} ipc call lockScreen lock";
+            "${lib.getExe self'.packages.noctalia} msg session lock";
 
           # Workspaces.
           "Mod+1".focus-workspace = 1;
@@ -166,7 +178,7 @@
           "Alt+Print".screenshot-window = { };
 
           "Mod+Space".spawn-sh =
-            "${lib.getExe self'.packages.noctalia} ipc call launcher toggle";
+            "${lib.getExe self'.packages.noctalia} msg panel-toggle launcher";
         };
       };
     };

@@ -2,7 +2,7 @@
   perSystem =
     { pkgs, ... }:
     let
-      oneDarkTwo = (pkgs.formats.json { }).generate "One Dark Two.json" {
+      oneDarkTwo = {
         dark = {
           mPrimary = "#62BAC6";
           mOnPrimary = "#21252B";
@@ -97,17 +97,31 @@
         };
       };
 
-      wrappedNoctalia = inputs.wrapper-modules.wrappers.noctalia-shell.wrap {
-        inherit pkgs;
-        settings = builtins.fromJSON (builtins.readFile ./noctalia.json);
+      configToml = ./noctalia.toml;
+      wallpaperToml = (pkgs.formats.toml { }).generate "wallpaper.toml" {
+        wallpaper = {
+          enabled = true;
+          directory = "/home/threated/Pictures/Wallpapers";
+          fill_mode = "crop";
+          transition_on_startup = false;
+          default.path = pkgs.nixos-artwork.wallpapers.simple-dark-gray.gnomeFilePath;
+        };
       };
+      paletteJson = (pkgs.formats.json { }).generate "One Dark Two.json" oneDarkTwo;
+      configHome = pkgs.runCommand "noctalia-config" { } ''
+        install -Dm644 ${configToml} "$out/noctalia/config.toml"
+        install -Dm644 ${wallpaperToml} "$out/noctalia/wallpaper.toml"
+        install -Dm644 ${paletteJson} "$out/noctalia/palettes/One Dark Two.json"
+      '';
     in
     {
-      packages.noctalia = wrappedNoctalia.overrideAttrs (old: {
-        postInstall = (old.postInstall or "") + ''
-          install -Dm644 ${oneDarkTwo} \
-            "$out/share/noctalia-shell/Assets/ColorScheme/One Dark Two/One Dark Two.json"
-        '';
-      });
+      packages.noctalia = inputs.wrapper-modules.lib.wrapPackage {
+        inherit pkgs;
+        package = inputs.noctalia.packages.${pkgs.stdenv.hostPlatform.system}.default;
+        runtimePkgs = [
+          inputs.noctalia-greeter.packages.${pkgs.stdenv.hostPlatform.system}.default
+        ];
+        env.NOCTALIA_CONFIG_HOME = configHome;
+      };
     };
 }

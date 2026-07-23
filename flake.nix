@@ -1,11 +1,21 @@
 {
   description = "Nix configurations";
 
+  nixConfig = {
+    extra-substituters = [ "https://noctalia.cachix.org" ];
+    extra-trusted-public-keys =
+      [ "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4=" ];
+  };
+
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
     wrapper-modules.url = "github:BirdeeHub/nix-wrapper-modules";
     wrapper-modules.inputs.nixpkgs.follows = "nixpkgs";
+
+    # Keep Noctalia's own nixpkgs input: changing it would invalidate the
+    # derivations published by the project's binary cache.
+    noctalia.url = "github:noctalia-dev/noctalia/cachix";
 
     noctalia-greeter = {
       url = "github:noctalia-dev/noctalia-greeter";
