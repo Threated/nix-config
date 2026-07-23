@@ -2,8 +2,11 @@
 
   # This is your system configuration entry-point
   flake.nixosConfigurations.laptop = inputs.nixpkgs.lib.nixosSystem {
-    modules =
-      [ self.nixosModules.laptop self.nixosModules.hm self.nixosModules.niri ];
+    modules = [
+      self.nixosModules.laptop
+      self.nixosModules.hm
+      self.nixosModules.niri
+    ];
   };
 
   # This is your configuration.nix, a place where you configure your system
@@ -99,11 +102,13 @@
     users.users.threated = {
       isNormalUser = true;
       description = "threated";
-      extraGroups = [ "networkmanager" "wheel" ];
+      extraGroups = [
+        "networkmanager"
+        "wheel"
+      ];
       shell = self.packages.${pkgs.stdenv.hostPlatform.system}.fish;
     };
-    environment.shells =
-      [ self.packages.${pkgs.stdenv.hostPlatform.system}.fish ];
+    environment.shells = [ self.packages.${pkgs.stdenv.hostPlatform.system}.fish ];
 
     # Allow unfree packages
     nixpkgs.config.allowUnfree = true;
@@ -132,7 +137,10 @@
     #   enable = true;
     #   enableSSHSupport = true;
     # };
-    nix.settings.experimental-features = [ "nix-command" "flakes" ];
+    nix.settings.experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
 
     # List services that you want to enable:
 
@@ -155,8 +163,7 @@
 
     # 2. Force tailscaled to use nftables (Critical for clean nftables-only systems)
     # This avoids the "iptables-compat" translation layer issues.
-    systemd.services.tailscaled.serviceConfig.Environment =
-      [ "TS_DEBUG_FIREWALL_MODE=nftables" ];
+    systemd.services.tailscaled.serviceConfig.Environment = [ "TS_DEBUG_FIREWALL_MODE=nftables" ];
 
     # 3. Optimization: Prevent systemd from waiting for network online
     # (Optional but recommended for faster boot with VPNs)
