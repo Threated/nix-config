@@ -3,8 +3,9 @@
 
   nixConfig = {
     extra-substituters = [ "https://noctalia.cachix.org" ];
-    extra-trusted-public-keys =
-      [ "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4=" ];
+    extra-trusted-public-keys = [
+      "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4="
+    ];
   };
 
   inputs = {
@@ -23,29 +24,32 @@
     };
 
     codex-cli-nix.url = "github:sadjow/codex-cli-nix";
-
-    home-manager = {
-      url = "github:nix-community/home-manager";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
-  outputs = inputs@{ flake-parts, ... }:
+  outputs =
+    inputs@{ flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [ "x86_64-linux" ];
 
+      perSystem =
+        { system, ... }:
+        {
+          _module.args.pkgs = import inputs.nixpkgs {
+            inherit system;
+            config.allowUnfree = true;
+          };
+        };
+
       imports = [
-        inputs.home-manager.flakeModules.home-manager
         ./modules/theme.nix
         ./hosts/laptop/configuration.nix
-        ./modules/hm/base.nix
-        ./modules/nix/hm.nix
         ./modules/wrapped/jj.nix
         ./modules/wrapped/niri.nix
         ./modules/wrapped/noctalia.nix
         ./modules/wrapped/wezterm.nix
         ./modules/wrapped/ghostty.nix
         ./modules/wrapped/fish.nix
+        ./modules/wrapped/chrome.nix
       ];
     };
 }

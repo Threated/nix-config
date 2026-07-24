@@ -8,6 +8,13 @@
       ...
     }:
     {
+      packages.git = inputs.wrapper-modules.wrappers.git.wrap {
+        inherit pkgs;
+        settings.user = {
+          name = "Threated";
+          email = "jan2001.07@gmail.com";
+        };
+      };
       packages.jj = inputs.wrapper-modules.wrappers.jujutsu.wrap {
         inherit pkgs;
         settings = {

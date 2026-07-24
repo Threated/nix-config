@@ -4,7 +4,6 @@
   flake.nixosConfigurations.laptop = inputs.nixpkgs.lib.nixosSystem {
     modules = [
       self.nixosModules.laptop
-      self.nixosModules.hm
       self.nixosModules.niri
     ];
   };
@@ -12,8 +11,6 @@
   # This is your configuration.nix, a place where you configure your system
   # You can place it in a separate file.
   flake.nixosModules.laptop = { pkgs, config, ... }: {
-    home-manager.users.threated = self.homeModules.base;
-
     imports = [
       # Include the results of the hardware scan.
       ./hardware-configuration.nix
@@ -60,6 +57,7 @@
       # Hint electron apps to use wayland
       NIXOS_OZONE_WL = "1";
       PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
+      EDITOR = "vim";
     };
 
     # Configure console keymap
@@ -107,6 +105,34 @@
         "wheel"
       ];
       shell = self.packages.${pkgs.stdenv.hostPlatform.system}.fish;
+      packages = with pkgs; [
+        firefox
+        nautilus
+        self.packages.${pkgs.stdenv.hostPlatform.system}.chrome
+        discord
+        rustup
+        mold
+        openssl.dev
+        pkg-config
+        just
+        nodejs
+        clang
+        jq
+        zed-editor
+        neovim
+        gemini-cli
+        inputs.codex-cli-nix.packages.${pkgs.stdenv.hostPlatform.system}.default
+        nil
+        nixd
+        gdb
+        bun
+        dolphin-emu
+        vlc
+        self.packages.${pkgs.stdenv.hostPlatform.system}.git
+        self.packages.${pkgs.stdenv.hostPlatform.system}.jj
+        self.packages.${pkgs.stdenv.hostPlatform.system}.ghostty
+        self.packages.${pkgs.stdenv.hostPlatform.system}.fish
+      ];
     };
     environment.shells = [ self.packages.${pkgs.stdenv.hostPlatform.system}.fish ];
 
@@ -120,7 +146,6 @@
       curl
       ripgrep
       bat
-      git
       gh
       wl-clipboard
     ];
