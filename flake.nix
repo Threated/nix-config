@@ -36,6 +36,7 @@
 
       imports = [
         inputs.home-manager.flakeModules.home-manager
+        ./modules/theme.nix
         ./hosts/laptop/configuration.nix
         ./modules/hm/base.nix
         ./modules/nix/hm.nix

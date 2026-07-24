@@ -194,7 +194,7 @@ enabled = true
 memory_poll_seconds = 2.0
 
 [theme]
-custom_palette = "One Dark Two"
+custom_palette = "Ghostty"
 mode = "dark"
 source = "custom"
 

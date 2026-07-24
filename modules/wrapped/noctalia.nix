@@ -1,117 +1,58 @@
-{ inputs, ... }: {
+{ config, inputs, ... }:
+let
+  theme = config.theme;
+  inherit (theme) semantic;
+  terminal = {
+    inherit (theme) background foreground cursor cursorText;
+    selectionBg = theme.selectionBackground;
+    selectionFg = theme.selectionForeground;
+    inherit (theme) normal bright;
+  };
+  palette = {
+    mPrimary = semantic.primary;
+    mOnPrimary = semantic.onPrimary;
+    mSecondary = semantic.secondary;
+    mOnSecondary = semantic.onSecondary;
+    mTertiary = semantic.tertiary;
+    mOnTertiary = semantic.onTertiary;
+    mError = semantic.error;
+    mOnError = semantic.onError;
+    mSurface = semantic.surface;
+    mOnSurface = semantic.onSurface;
+    mSurfaceVariant = semantic.surfaceVariant;
+    mOnSurfaceVariant = semantic.onSurfaceVariant;
+    mOutline = semantic.outline;
+    mShadow = semantic.shadow;
+    mHover = semantic.hover;
+    mOnHover = semantic.onHover;
+    inherit terminal;
+  };
+in
+{
   perSystem =
     { pkgs, ... }:
     let
-      oneDarkTwo = {
-        dark = {
-          mPrimary = "#62BAC6";
-          mOnPrimary = "#21252B";
-          mSecondary = "#EAC786";
-          mOnSecondary = "#21252B";
-          mTertiary = "#98C379";
-          mOnTertiary = "#21252B";
-          mError = "#E27881";
-          mOnError = "#21252B";
-          mSurface = "#21252B";
-          mOnSurface = "#C9CCD3";
-          mHover = "#62BAC6";
-          mOnHover = "#282C34";
-          mSurfaceVariant = "#282C34";
-          mOnSurfaceVariant = "#78C4CE";
-          mOutline = "#393E47";
-          mShadow = "#1D1F23";
-          terminal = {
-            background = "#21252B";
-            foreground = "#E6E6E6";
-            cursor = "#78C4CE";
-            cursorText = "#21252B";
-            selectionBg = "#393E47";
-            selectionFg = "#E6E6E6";
-            normal = {
-              black = "#21252B";
-              red = "#E27881";
-              green = "#98C379";
-              yellow = "#EAC786";
-              blue = "#71B9F4";
-              magenta = "#C88BDA";
-              cyan = "#62BAC6";
-              white = "#C9CCD3";
-            };
-            bright = {
-              black = "#282C34";
-              red = "#E68991";
-              green = "#A8CC8E";
-              yellow = "#EDCF97";
-              blue = "#8DC7F6";
-              magenta = "#D3A2E2";
-              cyan = "#78C4CE";
-              white = "#E6E6E6";
-            };
-          };
-        };
-        light = {
-          mPrimary = "#5497A2";
-          mOnPrimary = "#DDDEDF";
-          mSecondary = "#BAA072";
-          mOnSecondary = "#DDDEDF";
-          mTertiary = "#7C9D68";
-          mOnTertiary = "#DDDEDF";
-          mError = "#B4656E";
-          mOnError = "#DDDEDF";
-          mSurface = "#E6E6E6";
-          mOnSurface = "#282C34";
-          mSurfaceVariant = "#DDDEDF";
-          mOnSurfaceVariant = "#393E47";
-          mOutline = "#C9CCD3";
-          mShadow = "#E6E6E6";
-          mHover = "#7C9D68";
-          mOnHover = "#E6E6E6";
-          terminal = {
-            foreground = "#282C34";
-            background = "#E6E6E6";
-            selectionFg = "#393E47";
-            selectionBg = "#C9CCD3";
-            cursorText = "#21252B";
-            cursor = "#5497A2";
-            normal = {
-              black = "#1D1F23";
-              red = "#B4656E";
-              green = "#7C9D68";
-              yellow = "#BAA072";
-              blue = "#5F96C4";
-              magenta = "#A073B1";
-              cyan = "#5497A2";
-              white = "#C9CCD3";
-            };
-            bright = {
-              black = "#21252B";
-              red = "#E27881";
-              green = "#98C379";
-              yellow = "#EAC786";
-              blue = "#71B9F4";
-              magenta = "#C88BDA";
-              cyan = "#62BAC6";
-              white = "#E6E6E6";
-            };
-          };
-        };
+      ghosttyPalette = {
+        dark = palette;
+        light = palette;
       };
 
       configToml = ./noctalia.toml;
+      wallpaperDirectory = ./../../assets/wallpapers;
       wallpaperToml = (pkgs.formats.toml { }).generate "wallpaper.toml" {
         wallpaper = {
           enabled = true;
-          directory = "/home/threated/Pictures/Wallpapers";
+          directory = toString wallpaperDirectory;
           fill_mode = "crop";
           transition_on_startup = false;
-          default.path = pkgs.nixos-artwork.wallpapers.simple-dark-gray.gnomeFilePath;
+          default.path = "${wallpaperDirectory}/raindbow-nix.png";
         };
       };
-      paletteJson = (pkgs.formats.json { }).generate "One Dark Two.json" oneDarkTwo;
+      paletteJson = (pkgs.formats.json { }).generate "${theme.name}.json" ghosttyPalette;
       configHome = pkgs.runCommand "noctalia-config" { } ''
         install -Dm644 ${configToml} "$out/noctalia/config.toml"
         install -Dm644 ${wallpaperToml} "$out/noctalia/wallpaper.toml"
-        install -Dm644 ${paletteJson} "$out/noctalia/palettes/One Dark Two.json"
+        install -Dm644 ${paletteJson} "$out/noctalia/palettes/${theme.name}.json"
       '';
     in
     {

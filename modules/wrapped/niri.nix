@@ -1,5 +1,14 @@
-{ self, inputs, ... }: {
-  flake.nixosModules.niri = { pkgs, lib, ... }: {
+{ self, config, inputs, ... }:
+let
+  theme = config.theme;
+in
+{
+  flake.nixosModules.niri = { pkgs, lib, ... }:
+  let
+    wallpaper = ./../../assets/wallpapers/raindbow-nix.png;
+  in
+  {
+
     imports = [ inputs.noctalia-greeter.nixosModules.default ];
 
     programs.niri = {
@@ -50,7 +59,7 @@
       settings = {
         appearance = {
           hide_logo = true;
-          scheme = "Tokyo-Night";
+          scheme = "Synced";
         };
         keyboard = {
           layout = "de";
@@ -62,11 +71,44 @@
     # The greeter runs before Noctalia and otherwise retains the wallpaper that
     # happened to be copied during its initial appearance sync. Point its cached
     # wallpaper at the declarative wallpaper so it cannot become stale.
-    systemd.tmpfiles.settings."10-noctalia-greeter" = {
-      "/var/lib/noctalia-greeter/wallpaper.png"."L+" = {
-        argument = pkgs.nixos-artwork.wallpapers.simple-dark-gray.gnomeFilePath;
+    systemd.tmpfiles.settings."10-noctalia-greeter" =
+      let
+        inherit (theme) semantic;
+        appearance = pkgs.writeText "noctalia-greeter-appearance.json" (
+          builtins.toJSON {
+            version = 1;
+            theme_mode = "dark";
+            palette = {
+              inherit (semantic)
+                primary
+                secondary
+                tertiary
+                error
+                surface
+                outline
+                shadow
+                hover
+                ;
+              on_primary = semantic.onPrimary;
+              on_secondary = semantic.onSecondary;
+              on_tertiary = semantic.onTertiary;
+              on_error = semantic.onError;
+              on_surface = semantic.onSurface;
+              surface_variant = semantic.surfaceVariant;
+              on_surface_variant = semantic.onSurfaceVariant;
+              on_hover = semantic.onHover;
+            };
+          }
+        );
+      in
+      {
+        "/var/lib/noctalia-greeter/appearance.json"."L+" = {
+          argument = toString appearance;
+        };
+        "/var/lib/noctalia-greeter/wallpaper.png"."L+" = {
+          argument = toString wallpaper;
+        };
       };
-    };
 
     # VT 1 contains the boot log. A dedicated, initially blank VT prevents it
     # from flashing while the greeter compositor hands DRM over to niri.
@@ -94,8 +136,8 @@
           gaps = 5;
           focus-ring = {
             width = 2;
-            active-color = "#7aa2f780";
-            inactive-color = "#565f8980";
+            active-color = "${theme.normal.blue}80";
+            inactive-color = "${theme.bright.black}80";
           };
         };
 
