@@ -123,10 +123,6 @@
       git
       gh
       wl-clipboard
-      #waybar
-      #libnotify
-      #swww
-      #rofi-wayland
     ];
 
     programs.steam.enable = true;

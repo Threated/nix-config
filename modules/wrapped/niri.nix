@@ -215,6 +215,7 @@ in
           # Overview, help and screenshots.
           "Mod+O".toggle-overview = { };
           "Mod+Shift+Slash".show-hotkey-overlay = { };
+          "Mod+Shift+S".spawn-sh = "${lib.getExe pkgs.wayshot} --geometry --clipboard";
           "Print".screenshot = { };
           "Ctrl+Print".screenshot-screen = { };
           "Alt+Print".screenshot-window = { };

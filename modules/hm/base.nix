@@ -50,6 +50,7 @@
         #   echo "Hello, ${config.home.username}!"
         # '')
         firefox
+        nautilus
         (google-chrome.override {
           commandLineArgs = [
             "--enable-features=UseOzonePlatform"
@@ -75,6 +76,7 @@
         gdb
         bun
         dolphin-emu
+        vlc
         self.packages.${pkgs.stdenv.hostPlatform.system}.jj
         self.packages.${pkgs.stdenv.hostPlatform.system}.ghostty
         self.packages.${pkgs.stdenv.hostPlatform.system}.fish
