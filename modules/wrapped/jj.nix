@@ -15,49 +15,131 @@
           email = "jan2001.07@gmail.com";
         };
       };
-      packages.jj = inputs.wrapper-modules.wrappers.jujutsu.wrap {
-        inherit pkgs;
-        settings = {
-          user.name = "Threated";
-          user.email = "jan2001.07@gmail.com";
-          ui.editor = "vim";
-          ui.default-command = [
-            "util"
-            "exec"
-            "--"
-            "${lib.getExe self'.packages.jjui}"
-          ];
-          templates.log = ''
-            if(self.root(),
-              format_root_commit(self),
-              label(
-                separate(" ",
-                  if(self.current_working_copy(), "working_copy"),
-                  if(self.immutable(), "immutable", "mutable"),
-                  if(self.conflict(), "conflicted"),
-                ),
-                concat(
-                  format_short_commit_header(self) ++ " ",
-                  if(diff.stat().total_added() > 0,
-                    label("diff added", "+" ++ diff.stat().total_added()),
-                    ""),
-                  if(diff.stat().total_removed() > 0,
-                    " " ++ label("diff removed", "-" ++ diff.stat().total_removed()),
-                    ""),
-                  "\n",
-                  separate(" ",
-                    if(self.empty(), empty_commit_marker),
-                    if(self.description(),
-                      self.description().first_line(),
-                      label(if(self.empty(), "empty"), description_placeholder),
-                    ),
-                  ) ++ "\n",
-                ),
-              )
-            )
+      packages.jj =
+        let
+          remoteChange = pkgs.writeShellScript "jj-remote-change" ''
+            set -euo pipefail
+
+            action="$1"
+            shift
+            revision="''${1:-@}"
+            if (( $# > 0 )); then
+              shift
+            fi
+
+            local_commit="$(
+              jj log --no-graph -r "exactly(($revision), 1)" \
+                -T 'commit_id ++ "\n"'
+            )"
+            change_id="$(
+              jj log --no-graph -r "commit_id($local_commit)" \
+                -T 'change_id.normal_hex() ++ "\n"'
+            )"
+            remote_commits="$(
+              jj log --no-graph -r '::remote_bookmarks()' \
+                -T "if(change_id.normal_hex() == \"$change_id\", commit_id ++ \"\\n\")"
+            )"
+            if [[ -z "$remote_commits" || "$remote_commits" == *$'\n'* ]]; then
+              echo "expected exactly one remote version of $revision with change ID $change_id" >&2
+              exit 1
+            fi
+            remote_commit="$remote_commits"
+
+            case "$action" in
+              diff)
+                exec jj diff --from "commit_id($remote_commit)" --to "commit_id($local_commit)" "$@"
+                ;;
+              extract)
+                if (( $# > 0 )); then
+                  echo "usage: jj erc [REVISION]" >&2
+                  exit 2
+                fi
+
+                jj new "commit_id($remote_commit)"
+                jj restore --from "commit_id($local_commit)"
+
+                if [[ -n "$(jj log --no-graph -r "children(commit_id($local_commit))" -T 'commit_id')" ]]; then
+                  jj rebase -s "children(commit_id($local_commit))" -o "commit_id($remote_commit)"
+                fi
+                if [[ -n "$(jj log --no-graph -r "bookmarks() & commit_id($local_commit)" -T 'commit_id')" ]]; then
+                  jj bookmark move \
+                    --from "commit_id($local_commit)" \
+                    --to "commit_id($remote_commit)" \
+                    --allow-backwards
+                fi
+
+                jj abandon "commit_id($local_commit)"
+                ;;
+              *)
+                echo "unknown remote-change action: $action" >&2
+                exit 2
+                ;;
+            esac
           '';
+        in
+        inputs.wrapper-modules.wrappers.jujutsu.wrap {
+          inherit pkgs;
+          settings = {
+            user.name = "Threated";
+            user.email = "jan2001.07@gmail.com";
+            ui.editor = "vim";
+            ui.default-command = [
+              "util"
+              "exec"
+              "--"
+              "${lib.getExe self'.packages.jjui}"
+            ];
+            aliases = {
+              # Diff a locally rewritten change against the version reachable
+              # from a remote bookmark with the same change ID.
+              drc = [
+                "util"
+                "exec"
+                "--"
+                "${remoteChange}"
+                "diff"
+              ];
+              # Extract that diff into a new leaf based on the remote version,
+              # then discard the local variant from the reviewed stack.
+              erc = [
+                "util"
+                "exec"
+                "--"
+                "${remoteChange}"
+                "extract"
+              ];
+            };
+            templates.log = ''
+              if(self.root(),
+                format_root_commit(self),
+                label(
+                  separate(" ",
+                    if(self.current_working_copy(), "working_copy"),
+                    if(self.immutable(), "immutable", "mutable"),
+                    if(self.conflict(), "conflicted"),
+                  ),
+                  concat(
+                    format_short_commit_header(self) ++ " ",
+                    if(diff.stat().total_added() > 0,
+                      label("diff added", "+" ++ diff.stat().total_added()),
+                      ""),
+                    if(diff.stat().total_removed() > 0,
+                      " " ++ label("diff removed", "-" ++ diff.stat().total_removed()),
+                      ""),
+                    "\n",
+                    separate(" ",
+                      if(self.empty(), empty_commit_marker),
+                      if(self.description(),
+                        self.description().first_line(),
+                        label(if(self.empty(), "empty"), description_placeholder),
+                      ),
+                    ) ++ "\n",
+                  ),
+                )
+              )
+            '';
+          };
         };
-      };
       packages.jjui = inputs.wrapper-modules.lib.wrapPackage (
         let
           from_git = pkgs.fetchurl {
