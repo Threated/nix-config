@@ -111,6 +111,7 @@
       packages = with pkgs; [
         firefox
         nautilus
+        mission-center
         self.packages.${pkgs.stdenv.hostPlatform.system}.chrome
         discord
         rustup
