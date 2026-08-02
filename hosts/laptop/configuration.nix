@@ -75,6 +75,9 @@
     # Enable CUPS to print documents.
     services.printing.enable = true;
 
+    # Enable removable-drive integration for Nautilus.
+    services.gvfs.enable = true;
+
     # Enable sound with pipewire.
     hardware.bluetooth.enable = true;
     services.pulseaudio.enable = false;
