@@ -77,8 +77,17 @@
     # Enable removable-drive integration for Nautilus.
     services.gvfs.enable = true;
 
+    # Keep the internal USB-attached Bluetooth controller ready so paired
+    # input devices can reconnect promptly after boot and resume.
+    hardware.bluetooth = {
+      enable = true;
+      powerOnBoot = true;
+    };
+    services.udev.extraRules = ''
+      ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0bda", ATTR{idProduct}=="4852", TEST=="power/control", ATTR{power/control}="on"
+    '';
+
     # Enable sound with pipewire.
-    hardware.bluetooth.enable = true;
     services.pulseaudio.enable = false;
     security.rtkit.enable = true;
     services.pipewire = {
