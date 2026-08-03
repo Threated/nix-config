@@ -27,8 +27,7 @@
     # Enable networking
     networking.networkmanager.enable = true;
 
-    virtualisation.docker.enable = true;
-    virtualisation.docker.liveRestore = false;
+    virtualisation.podman.enable = true;
 
     # Set your time zone.
     time.timeZone = "Europe/Berlin";
@@ -99,7 +98,6 @@
     # services.xserver.libinput.enable = true;
 
     # Define a user account. Don't forget to set a password with ‘passwd’.
-    users.extraGroups.docker.members = [ "threated" ];
     users.users.threated = {
       isNormalUser = true;
       description = "threated";
