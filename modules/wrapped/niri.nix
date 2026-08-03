@@ -114,9 +114,17 @@ in
     # from flashing while the greeter compositor hands DRM over to niri.
     services.greetd.settings.terminal.vt = lib.mkForce 7;
     services.upower.enable = true;
+
+    # Noctalia's brightness actions use the kernel backlight. This udev rule
+    # grants users in the video group access to that device.
+    services.udev.packages = [ pkgs.brightnessctl ];
   };
   perSystem = { pkgs, lib, self', ... }: {
-    packages.niri = inputs.wrapper-modules.wrappers.niri.wrap {
+    packages.niri =
+      let
+        noctalia = lib.getExe self'.packages.noctalia;
+      in
+      inputs.wrapper-modules.wrappers.niri.wrap {
       inherit pkgs;
       settings = {
         spawn-at-startup = [
@@ -220,8 +228,22 @@ in
           "Ctrl+Print".screenshot-screen = { };
           "Alt+Print".screenshot-window = { };
 
+          # Niri receives the physical keys; Noctalia performs the actions
+          # and presents its audio/brightness OSD.
+          "XF86AudioRaiseVolume".spawn-sh = "${noctalia} msg volume-up";
+          "XF86AudioLowerVolume".spawn-sh = "${noctalia} msg volume-down";
+          "XF86AudioMute".spawn-sh = "${noctalia} msg volume-mute";
+          "XF86AudioMicMute".spawn-sh = "${noctalia} msg mic-mute";
+          "XF86AudioPlay".spawn-sh = "${noctalia} msg media toggle";
+          "XF86AudioPause".spawn-sh = "${noctalia} msg media pause";
+          "XF86AudioStop".spawn-sh = "${noctalia} msg media stop";
+          "XF86AudioNext".spawn-sh = "${noctalia} msg media next";
+          "XF86AudioPrev".spawn-sh = "${noctalia} msg media previous";
+          "XF86MonBrightnessUp".spawn-sh = "${noctalia} msg brightness-up";
+          "XF86MonBrightnessDown".spawn-sh = "${noctalia} msg brightness-down";
+
           "Mod+Space".spawn-sh =
-            "${lib.getExe self'.packages.noctalia} msg panel-toggle launcher";
+            "${noctalia} msg panel-toggle launcher";
         };
       };
     };

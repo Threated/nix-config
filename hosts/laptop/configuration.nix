@@ -105,6 +105,7 @@
       description = "threated";
       extraGroups = [
         "networkmanager"
+        "video"
         "wheel"
       ];
       shell = self.packages.${pkgs.stdenv.hostPlatform.system}.fish;
