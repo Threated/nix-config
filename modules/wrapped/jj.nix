@@ -168,6 +168,42 @@
             )
           ) close_keymaps;
           jjui_conf = {
+            actions = [
+              {
+                name = "revisions.reveal_parent";
+                desc = "reveal and jump to parent";
+                key = "shift+j";
+                scope = "revisions";
+                lua = ''
+                  local commit_id = context.commit_id()
+                  if commit_id ~= nil then
+                    local selected = 'commit_id("' .. commit_id .. '")'
+                    jjui.builtin.revset.set(
+                      "(" .. revset.default() .. ") | " .. selected .. " | parents(" .. selected .. ")"
+                    )
+                    jjui.wait_refresh()
+                    jjui.builtin.revisions.jump_to_parent()
+                  end
+                '';
+              }
+              {
+                name = "revisions.reveal_child";
+                desc = "reveal and jump to child";
+                key = "shift+k";
+                scope = "revisions";
+                lua = ''
+                  local commit_id = context.commit_id()
+                  if commit_id ~= nil then
+                    local selected = 'commit_id("' .. commit_id .. '")'
+                    jjui.builtin.revset.set(
+                      "(" .. revset.default() .. ") | " .. selected .. " | children(" .. selected .. ")"
+                    )
+                    jjui.wait_refresh()
+                    jjui.builtin.revisions.jump_to_children()
+                  end
+                '';
+              }
+            ];
             bindings = allow_ctrl_c;
           };
           toml = pkgs.formats.toml { };
