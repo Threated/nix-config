@@ -123,12 +123,20 @@ in
     packages.niri =
       let
         noctalia = lib.getExe self'.packages.noctalia;
+        # Give directly spawned desktop apps XDG-style systemd scopes so
+        # process monitors can associate their cgroups with desktop entries.
+        appScopeCommand =
+          appId: command:
+          "exec ${lib.getExe' pkgs.systemd "systemd-run"}"
+          + " --user --scope --collect --quiet"
+          + " --unit=app-${appId}-$(${lib.getExe' pkgs.systemd "systemd-id128"} new).scope"
+          + " -- ${lib.escapeShellArgs command}";
       in
       inputs.wrapper-modules.wrappers.niri.wrap {
       inherit pkgs;
       settings = {
-        spawn-at-startup = [
-          (lib.getExe self'.packages.noctalia)
+        spawn-sh-at-startup = [
+          (appScopeCommand "dev.noctalia.Noctalia" [ noctalia ])
         ];
 
         hotkey-overlay.skip-at-startup = true;
@@ -157,7 +165,9 @@ in
         ];
 
         binds = {
-          "Mod+Return".spawn-sh = lib.getExe self'.packages.ghostty;
+          "Mod+Return".spawn-sh = appScopeCommand "com.mitchellh.ghostty" [
+            (lib.getExe self'.packages.ghostty)
+          ];
           "Mod+D".close-window = { };
           "Mod+Q".close-window = { };
 

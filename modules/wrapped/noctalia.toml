@@ -153,6 +153,7 @@ clipboard_enabled = false
 corner_radius_scale = 1.0
 date_format = "%a, %b %d"
 font_family = "Sans Serif"
+launch_apps_as_systemd_services = true
 niri_overview_type_to_launch_enabled = true
 polkit_agent = true
 setup_wizard_enabled = false
