@@ -51,6 +51,7 @@
         ./modules/wrapped/fish.nix
         ./modules/wrapped/chrome.nix
         ./modules/wrapped/mission-center.nix
+        ./modules/rustup.nix
       ];
     };
 }

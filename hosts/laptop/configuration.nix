@@ -5,6 +5,7 @@
     modules = [
       self.nixosModules.laptop
       self.nixosModules.niri
+      self.nixosModules.rustup
     ];
   };
 
@@ -122,7 +123,6 @@
         self.packages.${pkgs.stdenv.hostPlatform.system}.mission-center
         self.packages.${pkgs.stdenv.hostPlatform.system}.chrome
         discord
-        rustup
         mold
         openssl.dev
         pkg-config
@@ -147,6 +147,11 @@
       ];
     };
     environment.shells = [ self.packages.${pkgs.stdenv.hostPlatform.system}.fish ];
+
+    programs.rustup-wild = {
+      enable = true;
+      user = "threated";
+    };
 
     # Allow unfree packages
     nixpkgs.config.allowUnfree = true;
