@@ -14,6 +14,7 @@
             set fish_greeting
             alias lsa "ls -la"
             alias cat "bat"
+            alias codey "codex --dangerously-bypass-approvals-and-sandbox"
             ${lib.getExe self'.packages.starship} init fish | source
           '';
           confFile = pkgs.writeText "config.fish" conf;
