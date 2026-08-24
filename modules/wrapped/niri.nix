@@ -165,8 +165,8 @@ in
         ];
 
         binds = {
-          "Mod+Return".spawn-sh = appScopeCommand "com.mitchellh.ghostty" [
-            (lib.getExe self'.packages.ghostty)
+          "Mod+Return".spawn-sh = appScopeCommand "org.wezfurlong.wezterm" [
+            (lib.getExe self'.packages.wezterm)
           ];
           "Mod+D".close-window = { };
           "Mod+Q".close-window = { };
