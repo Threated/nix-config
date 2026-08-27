@@ -16,6 +16,10 @@ in
       package = self.packages.${pkgs.stdenv.hostPlatform.system}.niri;
     };
 
+    # Niri launches xwayland-satellite on demand for applications that still
+    # use X11 APIs alongside their native Wayland windows (such as Discord).
+    environment.systemPackages = [ pkgs.xwayland-satellite ];
+
     programs.noctalia-greeter = {
       enable = true;
       # Noctalia currently hard-codes the login panel width. Keep a small
