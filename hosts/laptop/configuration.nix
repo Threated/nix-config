@@ -123,7 +123,6 @@
         mission-center
         self.packages.${pkgs.stdenv.hostPlatform.system}.chrome
         discord
-        mold
         openssl.dev
         pkg-config
         just
@@ -132,7 +131,6 @@
         jq
         zed-editor
         neovim
-        gemini-cli
         inputs.codex-cli-nix.packages.${pkgs.stdenv.hostPlatform.system}.default
         nil
         nixd
