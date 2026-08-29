@@ -22,43 +22,6 @@ in
 
     programs.noctalia-greeter = {
       enable = true;
-      # Noctalia currently hard-codes the login panel width. Keep a small
-      # local patch until upstream exposes this as a setting. The same patch
-      # guards keyboard callbacks during compositor teardown; without it the
-      # current upstream revision coredumps after a successful login.
-      package =
-        inputs.noctalia-greeter.packages.${pkgs.stdenv.hostPlatform.system}.default.overrideAttrs
-          (old: {
-            patches = (old.patches or [ ]) ++ [
-              (pkgs.writeText "noctalia-greeter-local.patch" ''
-                diff --git a/src/compositor/noctalia_compositor.c b/src/compositor/noctalia_compositor.c
-                --- a/src/compositor/noctalia_compositor.c
-                +++ b/src/compositor/noctalia_compositor.c
-                @@ -1477,4 +1477,7 @@ static void focus_mapped_views(struct greeter_server* server) {
-                 static void handle_keyboard_modifiers(struct wl_listener* listener, void* data) {
-                   (void)data;
-                   struct greeter_keyboard* keyboard = wl_container_of(listener, keyboard, modifiers);
-                +  if (keyboard->server->shutting_down) {
-                +    return;
-                +  }
-                   wlr_seat_keyboard_notify_modifiers(keyboard->server->seat, &keyboard->wlr_keyboard->modifiers);
-                @@ -1483,4 +1486,7 @@ static void handle_keyboard_modifiers(struct wl_listener* listener, void* data) {
-                 static void handle_keyboard_key(struct wl_listener* listener, void* data) {
-                   struct greeter_keyboard* keyboard = wl_container_of(listener, keyboard, key);
-                   struct greeter_server* server = keyboard->server;
-                +  if (server->shutting_down) {
-                +    return;
-                +  }
-                   struct wlr_keyboard_key_event* event = data;
-                diff --git a/src/greeter/greeter_surface.cpp b/src/greeter/greeter_surface.cpp
-                --- a/src/greeter/greeter_surface.cpp
-                +++ b/src/greeter/greeter_surface.cpp
-                @@ -1019 +1019 @@ void GreeterSurface::updateLayout() {
-                -  const float panelWidth = std::clamp(sw * 0.32f, Style::scaled(440.0f), Style::scaled(540.0f));
-                +  const float panelWidth = std::clamp(sw * 0.28f, Style::scaled(380.0f), Style::scaled(460.0f));
-              '')
-            ];
-          });
       greeter-args = "--session niri";
       settings = {
         appearance = {
