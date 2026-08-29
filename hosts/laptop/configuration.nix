@@ -120,7 +120,7 @@
       packages = with pkgs; [
         firefox
         nautilus
-        self.packages.${pkgs.stdenv.hostPlatform.system}.mission-center
+        mission-center
         self.packages.${pkgs.stdenv.hostPlatform.system}.chrome
         discord
         mold
