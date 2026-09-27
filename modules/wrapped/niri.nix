@@ -20,7 +20,7 @@ in
     # use X11 APIs alongside their native Wayland windows (such as Discord).
     environment.systemPackages = [ pkgs.xwayland-satellite ];
 
-    programs.noctalia-greeter = {
+    services.displayManager.noctalia-greeter = {
       enable = true;
       greeter-args = "--session niri";
       settings = {
