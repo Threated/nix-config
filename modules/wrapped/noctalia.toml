@@ -241,5 +241,12 @@ show_label = false
 
 [widget.workspaces]
 display = "id"
-enable_scroll = true
 hide_empty_workspaces = false
+
+[widget.workspaces.actions]
+scroll_up = "workspace-previous"
+scroll_down = "workspace-next"
+
+[shell.screenshot]
+save_to_file = false
+copy_to_clipboard = true

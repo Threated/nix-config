@@ -200,7 +200,7 @@ in
           # Overview, help and screenshots.
           "Mod+O".toggle-overview = { };
           "Mod+Shift+Slash".show-hotkey-overlay = { };
-          "Mod+Shift+S".spawn-sh = "${lib.getExe pkgs.wayshot} --geometry --clipboard";
+          "Mod+Shift+S".spawn-sh = "${noctalia} msg screenshot-region";
           "Print".screenshot = { };
           "Ctrl+Print".screenshot-screen = { };
           "Alt+Print".screenshot-window = { };
