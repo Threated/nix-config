@@ -63,8 +63,9 @@ action = "lock"
 enabled = true
 timeout = 660
 
-[idle.behavior.lock-and-suspend]
-action = "lock_and_suspend"
+[idle.behavior.suspend-then-hibernate]
+action = "command"
+command = "systemctl suspend-then-hibernate"
 enabled = true
 timeout = 1800
 

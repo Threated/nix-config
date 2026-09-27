@@ -22,6 +22,17 @@
     boot.loader.systemd-boot.configurationLimit = 5;
     boot.loader.efi.canTouchEfiVariables = true;
 
+    # Persistent swap and resume configuration for hibernation.
+    swapDevices = [
+      {
+        device = "/swapfile";
+        size = 18432;
+      }
+    ];
+    boot.resumeDevice = "/dev/disk/by-uuid/5c7f9599-da3d-4bc0-b1ef-3c1cd3430cd2";
+    boot.kernelParams = [ "resume_offset=204433408" ];
+    systemd.sleep.settings.Sleep.HibernateDelaySec = "1h";
+
     networking.hostName = "nixos"; # Define your hostname.
     # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
