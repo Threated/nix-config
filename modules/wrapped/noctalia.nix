@@ -42,7 +42,7 @@ in
       wallpaperToml = (pkgs.formats.toml { }).generate "wallpaper.toml" {
         wallpaper = {
           enabled = true;
-          directory = toString wallpaperDirectory;
+          directory = "${wallpaperDirectory}";
           fill_mode = "crop";
           transition_on_startup = false;
           default.path = "${wallpaperDirectory}/raindbow-nix.png";
