@@ -22,8 +22,9 @@ in
 
     services.displayManager.noctalia-greeter = {
       enable = true;
-      greeter-args = "--session niri";
       settings = {
+        # Hosts can override this through the greeter's settings options.
+        session.default = lib.mkDefault "niri";
         appearance = {
           hide_logo = true;
           scheme = "Synced";

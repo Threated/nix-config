@@ -17,6 +17,9 @@
       ./hardware-configuration.nix
     ];
 
+    # Open the greeter directly.
+    services.displayManager.noctalia-greeter.settings.user.default = "threated";
+
     # Bootloader.
     boot.loader.systemd-boot.enable = true;
     boot.loader.systemd-boot.configurationLimit = 5;
