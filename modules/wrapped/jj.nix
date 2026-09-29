@@ -204,7 +204,24 @@
                 '';
               }
             ];
-            bindings = allow_ctrl_c;
+            bindings = allow_ctrl_c ++ [
+              {
+                key = [
+                  "enter"
+                  "alt+enter"
+                  "ctrl+s"
+                ];
+                action = "revisions.inline_describe.accept";
+                scope = "revisions.inline_describe";
+                desc = "accept";
+              }
+              {
+                key = "shift+enter";
+                action = "revisions.inline_describe.new_line";
+                scope = "revisions.inline_describe";
+                desc = "new line";
+              }
+            ];
           };
           toml = pkgs.formats.toml { };
           serialized_conf = toml.generate "jjui.toml" jjui_conf;
