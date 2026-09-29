@@ -17,6 +17,16 @@ vim.opt.statusline = " jj diff edit | Ctrl j/k: next/prev hunk | Ctrl c: apply |
 -- Use jjui's terminal palette instead of Neovim's default colorscheme.
 local theme = assert(vim.g.jj_diff_theme, "Missing jj diff editor theme")
 local colors = theme.normal
+local function blend(color, amount)
+  local channels = {}
+  for offset = 2, 6, 2 do
+    local base = tonumber(theme.background:sub(offset, offset + 1), 16)
+    local tint = tonumber(color:sub(offset, offset + 1), 16)
+    channels[#channels + 1] = math.floor(base + (tint - base) * amount + 0.5)
+  end
+  return string.format("#%02x%02x%02x", unpack(channels))
+end
+
 local highlights = {
   Normal = { fg = theme.foreground, bg = "NONE" },
   NormalNC = { link = "Normal" },
@@ -40,6 +50,13 @@ local highlights = {
   Comment = { fg = theme.bright.black, italic = true },
   Function = { fg = colors.blue },
   Type = { fg = colors.cyan },
+  Identifier = { fg = colors.white },
+  Constant = { fg = colors.yellow },
+  Special = { fg = colors.blue },
+  PreProc = { link = "Keyword" },
+  Operator = { link = "Keyword" },
+  Delimiter = { link = "Normal" },
+  ["@variable"] = { link = "Normal" },
   DiffAdd = { fg = colors.green, bg = "NONE" },
   DiffDelete = { fg = colors.red, bg = "NONE" },
   DiffChange = { fg = colors.green, bg = "NONE", underline = true },
@@ -47,17 +64,25 @@ local highlights = {
   MiniDiffSignAdd = { link = "DiffAdd" },
   MiniDiffSignChange = { fg = colors.yellow },
   MiniDiffSignDelete = { link = "DiffDelete" },
-  MiniDiffOverAdd = { link = "DiffAdd" },
+  MiniDiffOverAdd = { bg = blend(colors.green, 0.12) },
   MiniDiffOverDelete = { link = "DiffDelete" },
   MiniDiffOverChange = { fg = colors.red, bg = "NONE", underline = true },
-  MiniDiffOverChangeBuf = { link = "DiffChange" },
+  MiniDiffOverChangeBuf = { bg = blend(colors.green, 0.12), underline = true },
   MiniDiffOverContext = { link = "Normal" },
-  MiniDiffOverContextBuf = { link = "Normal" },
+  MiniDiffOverContextBuf = { bg = theme.background },
 }
 vim.cmd("syntax enable")
 for group, style in pairs(highlights) do
   vim.api.nvim_set_hl(0, group, style)
 end
+
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = { "nix", "rust" },
+  callback = function(event)
+    vim.treesitter.start(event.buf)
+    vim.bo[event.buf].syntax = ""
+  end,
+})
 
 local args = vim.fn.argv()
 assert(#args == 2, "Expected jj's left and right directories")

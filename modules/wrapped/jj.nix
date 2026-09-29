@@ -11,38 +11,51 @@ in
       ...
     }:
     {
-      packages.jj-diff-editor = pkgs.writeShellApplication {
-        name = "jj-diff-editor";
-        runtimeInputs = [ pkgs.coreutils ];
-        text = ''
-          if [[ $# != 2 && $# != 3 ]]; then
-            echo "usage: jj-diff-editor LEFT RIGHT [LINE]" >&2
-            exit 2
-          fi
-          export JJUI_DIFF_LINE="''${3:-}"
-          if [[ -n "$JJUI_DIFF_LINE" && ! "$JJUI_DIFF_LINE" =~ ^[1-9][0-9]*$ ]]; then
-            echo "LINE must be a positive integer" >&2
-            exit 2
-          fi
-
-          session_dir=$(mktemp -d)
-          trap 'rm -rf "$session_dir"' EXIT
-          export JJUI_DIFF_ACCEPT="$session_dir/accepted"
-
-          if ${lib.getExe pkgs.neovim-unwrapped} --noplugin -n -i NONE \
-            --cmd 'set runtimepath^=${pkgs.vimPlugins.mini-diff}' \
-            -u ${pkgs.writeText "jj-diff-editor.lua" (''
-              vim.g.jj_diff_theme = vim.json.decode([==[${builtins.toJSON diffTheme}]==])
-            '' + builtins.readFile ./jj-diff-editor.lua)} \
-            -- "$1" "$2"; then
-            if [[ -f "$JJUI_DIFF_ACCEPT" ]]; then
-              exit 0
+      packages.jj-diff-editor =
+        let
+          treesitter = pkgs.symlinkJoin {
+            name = "jj-diff-treesitter";
+            paths = with pkgs.vimPlugins.nvim-treesitter; [
+              parsers.nix
+              parsers.rust
+              queries.nix
+              queries.rust
+            ];
+          };
+        in
+        pkgs.writeShellApplication {
+          name = "jj-diff-editor";
+          runtimeInputs = [ pkgs.coreutils ];
+          text = ''
+            if [[ $# != 2 && $# != 3 ]]; then
+              echo "usage: jj-diff-editor LEFT RIGHT [LINE]" >&2
+              exit 2
             fi
-          fi
-          echo "Diff edit discarded" >&2
-          exit 1
-        '';
-      };
+            export JJUI_DIFF_LINE="''${3:-}"
+            if [[ -n "$JJUI_DIFF_LINE" && ! "$JJUI_DIFF_LINE" =~ ^[1-9][0-9]*$ ]]; then
+              echo "LINE must be a positive integer" >&2
+              exit 2
+            fi
+
+            session_dir=$(mktemp -d)
+            trap 'rm -rf "$session_dir"' EXIT
+            export JJUI_DIFF_ACCEPT="$session_dir/accepted"
+
+            if ${lib.getExe pkgs.neovim-unwrapped} --noplugin -n -i NONE \
+              --cmd 'set runtimepath^=${pkgs.vimPlugins.mini-diff}' \
+              --cmd 'set runtimepath^=${treesitter}' \
+              -u ${pkgs.writeText "jj-diff-editor.lua" (''
+                vim.g.jj_diff_theme = vim.json.decode([==[${builtins.toJSON diffTheme}]==])
+              '' + builtins.readFile ./jj-diff-editor.lua)} \
+              -- "$1" "$2"; then
+              if [[ -f "$JJUI_DIFF_ACCEPT" ]]; then
+                exit 0
+              fi
+            fi
+            echo "Diff edit discarded" >&2
+            exit 1
+          '';
+        };
       packages.git = inputs.wrapper-modules.wrappers.git.wrap {
         inherit pkgs;
         settings.user = {
