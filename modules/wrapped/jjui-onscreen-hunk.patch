@@ -1,0 +1,495 @@
+diff --git a/internal/scripting/lua.go b/internal/scripting/lua.go
+index ce628e1..508cd51 100644
+--- a/internal/scripting/lua.go
++++ b/internal/scripting/lua.go
+@@ -448,6 +448,12 @@ func registerAPI(L *lua.LState, ctx *uicontext.MainContext) {
+ 	registerGeneratedActionAPI(L, root, false)
+ 	registerGeneratedActionAPI(L, builtinRoot, true)
+ 	registerStateGetter(L, root, ctx, "revisions.inline_describe.content")
++	registerStateGetter(L, root, ctx, "diff.target_file")
++	registerStateGetter(L, root, ctx, "diff.target_line")
++	registerStateGetter(L, root, ctx, "diff.target_revision")
++	ensureScopeTable(L, root, "diff").RawSetString("refresh", L.NewFunction(func(L *lua.LState) int {
++		return yieldStep(L, step{cmd: intents.Invoke(intents.DiffRefresh{})})
++	}))
+ 	L.SetGlobal("jjui", root)
+ 
+ 	// but also expose at the top level for convenience
+diff --git a/internal/scripting/lua_test.go b/internal/scripting/lua_test.go
+index 52a3bbe..d9f8e77 100644
+--- a/internal/scripting/lua_test.go
++++ b/internal/scripting/lua_test.go
+@@ -24,6 +24,24 @@ type testStateProvider struct {
+ 	states   map[string]any
+ }
+ 
++func TestDiffTargetGettersReadLiveState(t *testing.T) {
++	ctx := &uicontext.MainContext{}
++	L := lua.NewState()
++	defer L.Close()
++	registerAPI(L, ctx)
++	require.NoError(t, L.DoString(`assert(jjui.diff.target_file() == nil)`))
++	ctx.SetStateProvider(&testStateProvider{states: map[string]any{
++		"diff.target_file":     `file:"with spaces.txt"`,
++		"diff.target_line":     42,
++		"diff.target_revision": "selected",
++	}})
++	require.NoError(t, L.DoString(`
++		assert(jjui.diff.target_file() == 'file:"with spaces.txt"')
++		assert(jjui.diff.target_line() == 42)
++		assert(jjui.diff.target_revision() == 'selected')
++	`))
++}
++
+ func TestStateGetterTracksProviderReplacementAndRejectsUnsupportedValues(t *testing.T) {
+ 	ctx := &uicontext.MainContext{}
+ 	L := lua.NewState()
+diff --git a/internal/ui/diff/diff.go b/internal/ui/diff/diff.go
+index 7249c1a..45a3ec2 100644
+--- a/internal/ui/diff/diff.go
++++ b/internal/ui/diff/diff.go
+@@ -169,6 +169,7 @@ type Model struct {
+ 	maxLineWidth int
+ 
+ 	scrollY        int
++	cursorY        int
+ 	viewportWidth  int
+ 	viewportHeight int
+ 
+@@ -206,31 +207,44 @@ func (m *Model) HandleIntent(intent intents.Intent) (tea.Cmd, bool) {
+ 	case intents.DiffScroll:
+ 		switch msg.Kind {
+ 		case intents.DiffScrollUp:
+-			m.scrollY -= 1
++			m.cursorY -= 1
+ 		case intents.DiffScrollDown:
+-			m.scrollY += 1
++			m.cursorY += 1
+ 		case intents.DiffPageUp:
+-			m.scrollY -= m.viewportHeight
++			m.cursorY -= m.viewportHeight
+ 		case intents.DiffPageDown:
+-			m.scrollY += m.viewportHeight
++			m.cursorY += m.viewportHeight
+ 		case intents.DiffHalfPageUp:
+-			m.scrollY -= m.viewportHeight / 2
++			m.cursorY -= m.viewportHeight / 2
+ 		case intents.DiffHalfPageDown:
+-			m.scrollY += m.viewportHeight / 2
++			m.cursorY += m.viewportHeight / 2
+ 		case intents.DiffMoveTop:
+-			m.scrollY = 0
++			m.cursorY = 0
+ 		case intents.DiffMoveBottom:
+-			m.scrollY = max(0, m.mode.totalLines(m.viewportWidth)-m.viewportHeight)
++			m.cursorY = max(0, m.mode.totalLines(m.viewportWidth)-1)
+ 		}
++		m.ensureCursorVisible()
+ 		return nil, true
+ 
+ 	case intents.DiffToggleWrap:
++		line := m.cursorY
++		if wrapped, ok := m.mode.(*wrappedView); ok {
++			line, _ = wrapped.firstLine(line, m.viewportWidth)
++		}
+ 		switch m.mode.(type) {
+ 		case *wrappedView:
+ 			m.mode = newDefaultView(m.lines, m.maxLineWidth)
+ 		default:
+ 			m.mode = newWrappedView(m.lines)
+ 		}
++		m.cursorY = line
++		if wrapped, ok := m.mode.(*wrappedView); ok {
++			wrapped.ensureIndex(m.viewportWidth)
++			if line < len(wrapped.visualRowStart) {
++				m.cursorY = wrapped.visualRowStart[line]
++			}
++		}
++		m.ensureCursorVisible()
+ 		return nil, true
+ 
+ 	case intents.DiffShow:
+@@ -241,6 +255,8 @@ func (m *Model) HandleIntent(intent intents.Intent) (tea.Cmd, bool) {
+ 		m.targetErr = nil
+ 		m.currentFile = jj.FileName{}
+ 		return m.Init(), true
++	case intents.DiffRefresh:
++		return m.refreshContent(), true
+ 
+ 	case intents.DiffOpenTargetPicker:
+ 		return m.openTargetPicker(), true
+@@ -326,6 +342,14 @@ func (m *Model) clampScroll(width, height int) {
+ 	m.scrollY = max(0, min(m.scrollY, max(0, total-height)))
+ }
+ 
++// Cursor and viewport use visual rows, including wrapped continuations.
++func (m *Model) ensureCursorVisible() {
++	m.cursorY = max(0, min(m.cursorY, m.mode.totalLines(m.viewportWidth)-1))
++	height := max(1, m.viewportHeight)
++	m.scrollY = max(0, min(m.scrollY, m.cursorY))
++	m.scrollY = max(m.scrollY, m.cursorY-height+1)
++}
++
+ func (m *Model) SetContent(content string) {
+ 	wrapped := false
+ 	if m.mode != nil {
+@@ -351,6 +375,7 @@ func (m *Model) SetContent(content string) {
+ 	m.lines = lines
+ 	m.maxLineWidth = maxWidth
+ 	m.scrollY = 0
++	m.cursorY = 0
+ 
+ 	if wrapped {
+ 		m.mode = newWrappedView(lines)
+@@ -361,13 +386,15 @@ func (m *Model) SetContent(content string) {
+ 
+ func (m *Model) Update(msg tea.Msg) tea.Cmd {
+ 	switch msg := msg.(type) {
+-	case intents.DiffScroll, intents.DiffToggleWrap, intents.DiffShow, intents.DiffOpenTargetPicker, intents.DiffFileNavigate, intents.DiffScrollHorizontal:
++	case intents.DiffScroll, intents.DiffToggleWrap, intents.DiffShow, intents.DiffRefresh, intents.DiffOpenTargetPicker, intents.DiffFileNavigate, intents.DiffScrollHorizontal:
+ 		cmd, _ := m.HandleIntent(msg.(intents.Intent))
+ 		return cmd
+ 
+ 	case ScrollMsg:
+ 		if !msg.Horizontal {
+ 			m.scrollY += msg.Delta
++			m.clampScroll(m.viewportWidth, m.viewportHeight)
++			m.cursorY = max(m.scrollY, min(m.cursorY, m.scrollY+max(1, m.viewportHeight)-1))
+ 		} else {
+ 			m.mode.scrollHorizontal(msg.Delta, m.viewportWidth)
+ 		}
+@@ -387,6 +414,18 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
+ 		m.SetContent(msg.content)
+ 		m.currentFile = msg.file
+ 		return nil
++	case refreshLoadedMsg:
++		if !slices.Equal(msg.args, m.originalArgs) || msg.file != m.currentFile {
++			return nil
++		}
++		if msg.err != nil {
++			return intents.Invoke(intents.AddMessage{Text: msg.err.Error(), Err: msg.err})
++		}
++		m.SetContent(msg.content)
++		m.scrollY = msg.scroll
++		m.cursorY = msg.cursor
++		m.ensureCursorVisible()
++		return m.Init()
+ 	case target_picker.TargetSelectedMsg:
+ 		if _, ok := msg.Payload.(targetPickerPayload); !ok {
+ 			return nil
+@@ -406,9 +445,12 @@ func (m *Model) ViewRect(dl *render.DisplayContext, box layout.Box) {
+ 	height := box.R.Dy()
+ 	m.viewportWidth = width
+ 	m.viewportHeight = height
++	m.ensureCursorVisible()
+ 	m.clampScroll(width, height)
+ 
+ 	m.mode.ViewRect(dl, box, m.scrollY)
++	dl.AddPaint(layout.Rect(box.R.Min.X, box.R.Min.Y+m.cursorY-m.scrollY, width, 1),
++		theme.DefaultPalette.Get("diff", "", "", true), 1)
+ 	dl.AddInteraction(box.R, ScrollMsg{}, render.InteractionScroll, 0)
+ }
+ 
+diff --git a/internal/ui/diff/diff_test.go b/internal/ui/diff/diff_test.go
+index 9e411ae..1058c42 100644
+--- a/internal/ui/diff/diff_test.go
++++ b/internal/ui/diff/diff_test.go
+@@ -58,7 +58,8 @@ func TestUpdate_DiffScrollIntentChangesContent(t *testing.T) {
+ 
+ 	model.Update(intents.DiffScroll{Kind: intents.DiffScrollDown})
+ 	second := test.Stripped(test.RenderImmediate(model, 10, 2))
+-	assert.NotContains(t, second, "1")
++	assert.Contains(t, second, "1")
++	assert.Equal(t, 1, model.cursorY)
+ 	assert.Contains(t, second, "2")
+ 
+ 	model.Update(intents.DiffScroll{Kind: intents.DiffScrollUp})
+diff --git a/internal/ui/diff/edit_target.go b/internal/ui/diff/edit_target.go
+new file mode 100644
+index 0000000..0e5aeb0
+--- /dev/null
++++ b/internal/ui/diff/edit_target.go
+@@ -0,0 +1,127 @@
++package diff
++
++import (
++	"regexp"
++	"strconv"
++	"strings"
++
++	tea "charm.land/bubbletea/v2"
++	"github.com/charmbracelet/x/ansi"
++	"github.com/idursun/jjui/internal/jj"
++)
++
++type refreshLoadedMsg struct {
++	content string
++	args    []string
++	file    jj.FileName
++	scroll  int
++	cursor  int
++	err     error
++}
++
++// Reload the same comparison and file without resetting the viewport.
++func (m *Model) refreshContent() tea.Cmd {
++	if m.context == nil || len(m.originalArgs) == 0 {
++		return nil
++	}
++	originalArgs := append([]string(nil), m.originalArgs...)
++	args := append([]string(nil), originalArgs...)
++	file, scroll, cursor := m.currentFile, m.scrollY, m.cursorY
++	if !file.IsEmpty() {
++		args = append(args, file.Escaped())
++	}
++	return func() tea.Msg {
++		output, err := m.context.RunCommandImmediate(args)
++		return refreshLoadedMsg{content: string(output), args: originalArgs, file: file, scroll: scroll, cursor: cursor, err: err}
++	}
++}
++
++var numberedDiffRow = regexp.MustCompile(`^\s*([0-9]*)\s+([0-9]*)\s*:`)
++
++// QueryState exposes the file and modified-side line selected by the cursor.
++// Unsupported formatters, binary diffs, and static/operation diffs have no target.
++func (m *Model) QueryState(name string) (any, bool) {
++	revision := m.editRevision()
++	if revision == "" {
++		return nil, false
++	}
++	if name == "target_revision" {
++		return revision, true
++	}
++	file, line, ok := m.editTarget()
++	if !ok {
++		return nil, false
++	}
++	switch name {
++	case "target_file":
++		return file.Escaped(), true
++	case "target_line":
++		return line, true
++	}
++	return nil, false
++}
++
++func (m *Model) editRevision() string {
++	if len(m.originalArgs) == 0 || m.originalArgs[0] != "diff" {
++		return ""
++	}
++	for i, arg := range m.originalArgs {
++		if (arg == "-r" || arg == "--revision" || arg == "--to" || arg == "-t") && i+1 < len(m.originalArgs) {
++			return m.originalArgs[i+1]
++		}
++	}
++	return ""
++}
++
++func (m *Model) editTarget() (jj.FileName, int, bool) {
++	selected := m.cursorY
++	if wrapped, ok := m.mode.(*wrappedView); ok {
++		selected, _ = wrapped.firstLine(selected, max(1, m.viewportWidth))
++	}
++	var file jj.FileName
++	lastRight := 0
++	for index, styled := range m.lines {
++		line := ansi.Strip(styled)
++		if header, ok := m.editHeader(line); ok {
++			// Do not cross into another file when seeking from a header or gap.
++			if index > selected && header != file {
++				break
++			}
++			file = header
++			lastRight = 0
++			continue
++		}
++		if file.IsEmpty() {
++			continue
++		}
++		right := 0
++		if matches := numberedDiffRow.FindStringSubmatch(line); matches != nil && (matches[1] != "" || matches[2] != "") {
++			right, _ = strconv.Atoi(matches[2])
++			if matches[2] == "" {
++				right = lastRight + 1
++			} else {
++				lastRight = right
++			}
++		}
++		if index >= selected && right > 0 {
++			return file, right, true
++		}
++	}
++	return jj.FileName{}, 0, false
++}
++
++func (m *Model) editHeader(line string) (jj.FileName, bool) {
++	defaultHeader := false
++	for _, verb := range []string{"Modified ", "Added ", "Removed ", "Renamed ", "Copied "} {
++		defaultHeader = defaultHeader || (strings.HasPrefix(line, verb) && strings.Contains(line, " file "))
++	}
++	var match jj.FileName
++	for _, file := range m.targetFiles {
++		if defaultHeader && strings.HasSuffix(line, " "+file.Path()+":") {
++			if len(file.Path()) > len(match.Path()) {
++				match = file
++			}
++		}
++	}
++	return match, !match.IsEmpty()
++}
+diff --git a/internal/ui/diff/edit_target_test.go b/internal/ui/diff/edit_target_test.go
+new file mode 100644
+index 0000000..f7421b3
+--- /dev/null
++++ b/internal/ui/diff/edit_target_test.go
+@@ -0,0 +1,121 @@
++package diff
++
++import (
++	"strings"
++	"testing"
++
++	"github.com/idursun/jjui/internal/jj"
++	"github.com/idursun/jjui/internal/ui/intents"
++	"github.com/idursun/jjui/internal/ui/layout"
++	"github.com/idursun/jjui/internal/ui/render"
++	"github.com/idursun/jjui/test"
++	"github.com/stretchr/testify/require"
++)
++
++func TestRefreshKeepsComparisonFileAndScroll(t *testing.T) {
++	runner := test.NewTestCommandRunner(t)
++	args := []string{"diff", "--from", "base", "--to", "selected"}
++	file := jj.NewFileName("with spaces.txt")
++	runner.Expect(append(append([]string(nil), args...), file.Escaped())).SetOutput([]byte("updated\ncontent\nmore lines"))
++	runner.Expect(append(append([]string(nil), args...), "--summary")).SetOutput([]byte("M with spaces.txt"))
++	defer runner.Verify()
++	m := NewWithContext(test.NewTestContext(runner), "old\ncontent", args)
++	m.currentFile = file
++	m.scrollY = 1
++	m.cursorY = 1
++	m.viewportWidth, m.viewportHeight = 40, 2
++	test.SimulateModel(m, m.Update(intents.DiffRefresh{}))
++	require.Equal(t, args, m.originalArgs)
++	require.Equal(t, file, m.currentFile)
++	require.Equal(t, 1, m.scrollY)
++	require.Equal(t, 1, m.cursorY)
++	require.Equal(t, "updated", m.lines[0])
++}
++
++func TestEditTargetNumberedDiff(t *testing.T) {
++	content := "Modified regular file first.txt:\n   1    1: context\n   2     : old\n        2: new\n    ...\n  50   50: later hunk\nModified regular file name with spaces.txt:\n   7    8: next file"
++	for _, tc := range []struct {
++		top  int
++		file string
++		line int
++	}{
++		{0, "first.txt", 1}, {2, "first.txt", 2}, {4, "first.txt", 50},
++		{5, "first.txt", 50}, {6, "name with spaces.txt", 8}, {7, "name with spaces.txt", 8},
++	} {
++		m := New(content)
++		m.targetFiles = []jj.FileName{jj.NewFileName("first.txt"), jj.NewFileName("name with spaces.txt")}
++		m.cursorY = tc.top
++		file, line, ok := m.editTarget()
++		require.True(t, ok)
++		require.Equal(t, tc.file, file.Path())
++		require.Equal(t, tc.line, line)
++	}
++}
++
++func TestEditTargetWrapAndColors(t *testing.T) {
++	m := New("\x1b[32mModified regular file f.txt:\x1b[0m\n   1    1: " + strings.Repeat("x", 60) + "\n   9   10: next")
++	m.targetFiles = []jj.FileName{jj.NewFileName("f.txt")}
++	m.mode = newWrappedView(m.lines)
++	m.viewportWidth = 20
++	m.cursorY = 3 // inside the wrapped first source line
++	file, line, ok := m.editTarget()
++	require.True(t, ok)
++	require.Equal(t, "f.txt", file.Path())
++	require.Equal(t, 1, line)
++}
++
++func TestEditTargetRejectsNonTextAndStaticDiffs(t *testing.T) {
++	m := New("Modified regular file f.txt:\n   1    1: text\nModified regular file binary.dat:\n(binary)")
++	m.targetFiles = []jj.FileName{jj.NewFileName("f.txt"), jj.NewFileName("binary.dat")}
++	m.cursorY = 3
++	_, _, ok := m.editTarget()
++	require.False(t, ok)
++	_, ok = m.QueryState("target_revision")
++	require.False(t, ok)
++	m.originalArgs = []string{"op", "show", "test"}
++	_, ok = m.QueryState("target_revision")
++	require.False(t, ok)
++	m.originalArgs = []string{"diff", "--from", "old", "--to", "new"}
++	value, ok := m.QueryState("target_revision")
++	require.True(t, ok)
++	require.Equal(t, "new", value)
++}
++
++func TestCursorNavigationKeepsSelectionVisible(t *testing.T) {
++	m := New("0\n1\n2\n3\n4")
++	m.viewportWidth, m.viewportHeight = 20, 3
++	for range 2 {
++		m.Update(intents.DiffScroll{Kind: intents.DiffScrollDown})
++	}
++	require.Equal(t, 2, m.cursorY)
++	require.Equal(t, 0, m.scrollY)
++	m.Update(intents.DiffScroll{Kind: intents.DiffScrollDown})
++	require.Equal(t, 3, m.cursorY)
++	require.Equal(t, 1, m.scrollY)
++	m.Update(intents.DiffScroll{Kind: intents.DiffMoveBottom})
++	require.Equal(t, 4, m.cursorY)
++	require.Equal(t, 2, m.scrollY)
++	m.Update(intents.DiffScroll{Kind: intents.DiffMoveTop})
++	require.Zero(t, m.cursorY)
++	require.Zero(t, m.scrollY)
++}
++
++func TestCursorTargetsSelectedLineWithinViewport(t *testing.T) {
++	m := New("Modified regular file f.txt:\n   1    1: first\n  80   80: second")
++	m.targetFiles = []jj.FileName{jj.NewFileName("f.txt")}
++	m.viewportWidth, m.viewportHeight = 40, 10
++	m.Update(intents.DiffScroll{Kind: intents.DiffScrollDown})
++	m.Update(intents.DiffScroll{Kind: intents.DiffScrollDown})
++	_, line, ok := m.editTarget()
++	require.True(t, ok)
++	require.Equal(t, 80, line)
++	require.Zero(t, m.scrollY)
++}
++
++func TestSelectedLineDoesNotShowTerminalCursor(t *testing.T) {
++	m := New("first\nsecond\nthird")
++	m.cursorY = 1
++	dl := render.NewDisplayContext()
++	m.ViewRect(dl, layout.NewBox(layout.Rect(4, 5, 20, 3)))
++	require.Nil(t, dl.Cursor())
++}
+diff --git a/internal/ui/intents/diff_intents.go b/internal/ui/intents/diff_intents.go
+index 857fa2a..aa33378 100644
+--- a/internal/ui/intents/diff_intents.go
++++ b/internal/ui/intents/diff_intents.go
+@@ -55,6 +55,10 @@ type DiffShow struct {
+ 
+ func (DiffShow) isIntent() {}
+ 
++type DiffRefresh struct{}
++
++func (DiffRefresh) isIntent() {}
++
+ //jjui:bind scope=diff action=target_picker
+ type DiffOpenTargetPicker struct{}
+ 
+diff --git a/internal/ui/ui.go b/internal/ui/ui.go
+index c54b58e..9b89258 100644
+--- a/internal/ui/ui.go
++++ b/internal/ui/ui.go
+@@ -111,6 +111,9 @@ func (m *Model) Selection() common.SelectionSnapshot {
+ // Focus and visibility do not participate in lookup; owners decide whether a
+ // model is still live and can answer the local property.
+ func (m *Model) QueryState(name string) (any, bool) {
++	if strings.HasPrefix(name, "diff.") && m.diff != nil {
++		return m.diff.QueryState(strings.TrimPrefix(name, "diff."))
++	}
+ 	if strings.HasPrefix(name, "revisions.") && m.revisions != nil {
+ 		return m.revisions.QueryState(strings.TrimPrefix(name, "revisions."))
+ 	}
