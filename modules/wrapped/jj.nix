@@ -226,9 +226,23 @@ in
               exit 0
             fi
 
-            revision="$1"
-            export JJUI_DIFF_FILESET="$2"
-            line="$3"
+            unset JJUI_DIFF_PICKER
+            if [[ "$1" == --pick ]]; then
+              revision="$2"
+              mapfile -d "" -t changed_paths < <(jj diff -r "$revision" --color never -T 'path ++ "\0"')
+              if [[ "''${#changed_paths[@]}" == 0 ]]; then
+                echo "This change has no files to edit" >&2
+                exit 0
+              fi
+              export JJUI_DIFF_FILESET
+              JJUI_DIFF_FILESET="file:$(jq -cn --arg path "''${changed_paths[0]}" '$path')"
+              export JJUI_DIFF_PICKER=true
+              line=1
+            else
+              revision="$1"
+              export JJUI_DIFF_FILESET="$2"
+              line="$3"
+            fi
             session_dir=$(mktemp -d)
             trap 'rm -rf "$session_dir"' EXIT
             export JJUI_DIFF_SESSION="$session_dir"
@@ -425,6 +439,27 @@ in
           jjui_conf = {
             ui.colors."diff:selected".bg = diffTheme.selection;
             actions = [
+              {
+                name = "revisions.edit_diff";
+                key = "shift+e";
+                scope = "revisions";
+                desc = "edit change files";
+                lua = ''
+                  local commit_id = context.commit_id()
+                  if commit_id == nil then return end
+                  local revision = 'commit_id("' .. commit_id .. '")'
+                  local files = jj({"diff", "-r", revision, "--name-only"})
+                  if files == nil or files == "" then
+                    flash("This change has no files to edit")
+                    return
+                  end
+                  jj_interactive({
+                    "util", "exec", "--", "${lib.getExe self'.packages.jj-diff-edit}",
+                    "--pick", revision
+                  })
+                  revisions.refresh()
+                '';
+              }
               {
                 name = "diff.edit_revision";
                 key = "e";

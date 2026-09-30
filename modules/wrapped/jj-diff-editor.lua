@@ -472,6 +472,7 @@ vim.api.nvim_create_autocmd("VimEnter", {
       -- The initial snapshot has already been loaded by the coordinator.
       files[initial_file] = { base = vim.env.JJUI_DIFF_BASE }
       open_file(initial_file, target_line)
+      if vim.env.JJUI_DIFF_PICKER == "true" then vim.schedule(pick_file) end
     end)
   end,
 })
