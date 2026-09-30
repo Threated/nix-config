@@ -43,10 +43,9 @@ in
 
             if ${lib.getExe pkgs.neovim-unwrapped} --noplugin -n -i NONE \
               --cmd 'set runtimepath^=${pkgs.vimPlugins.mini-diff}' \
+              --cmd 'set runtimepath^=${pkgs.vimPlugins.onedarkpro-nvim}' \
               --cmd 'set runtimepath^=${treesitter}' \
-              -u ${pkgs.writeText "jj-diff-editor.lua" (''
-                vim.g.jj_diff_theme = vim.json.decode([==[${builtins.toJSON diffTheme}]==])
-              '' + builtins.readFile ./jj-diff-editor.lua)} \
+              -u ${pkgs.writeText "jj-diff-editor.lua" (builtins.readFile ./jj-diff-editor.lua)} \
               -- "$1" "$2"; then
               if [[ -f "$JJUI_DIFF_ACCEPT" ]]; then
                 exit 0

@@ -14,67 +14,27 @@ vim.opt.termguicolors = true
 vim.opt.laststatus = 3
 vim.opt.statusline = " jj diff edit | Ctrl j/k: next/prev hunk | Ctrl c: apply | q: discard "
 
--- Use jjui's terminal palette instead of Neovim's default colorscheme.
-local theme = assert(vim.g.jj_diff_theme, "Missing jj diff editor theme")
-local colors = theme.normal
-local function blend(color, amount)
-  local channels = {}
-  for offset = 2, 6, 2 do
-    local base = tonumber(theme.background:sub(offset, offset + 1), 16)
-    local tint = tonumber(color:sub(offset, offset + 1), 16)
-    channels[#channels + 1] = math.floor(base + (tint - base) * amount + 0.5)
-  end
-  return string.format("#%02x%02x%02x", unpack(channels))
-end
-
-local highlights = {
-  Normal = { fg = theme.foreground, bg = "NONE" },
-  NormalNC = { link = "Normal" },
-  NonText = { fg = theme.bright.black, bg = "NONE" },
-  LineNr = { link = "NonText" },
-  CursorLineNr = { fg = colors.white, bg = "NONE" },
-  CursorLine = { bg = theme.selection },
-  Visual = { bg = theme.selection },
-  Folded = { fg = theme.bright.black, bg = "NONE" },
-  FoldColumn = { link = "NonText" },
-  SignColumn = { bg = "NONE" },
-  StatusLine = { fg = colors.magenta, bg = "NONE", bold = true },
-  StatusLineNC = { link = "NonText" },
-  MsgArea = { link = "Normal" },
-  ErrorMsg = { fg = colors.red },
-  WarningMsg = { fg = colors.yellow },
-  Keyword = { fg = colors.magenta, bold = true },
-  Statement = { link = "Keyword" },
-  String = { fg = colors.green },
-  Number = { fg = colors.yellow },
-  Comment = { fg = theme.bright.black, italic = true },
-  Function = { fg = colors.blue },
-  Type = { fg = colors.cyan },
-  Identifier = { fg = colors.white },
-  Constant = { fg = colors.yellow },
-  Special = { fg = colors.blue },
-  PreProc = { link = "Keyword" },
-  Operator = { link = "Keyword" },
-  Delimiter = { link = "Normal" },
-  ["@variable"] = { link = "Normal" },
-  DiffAdd = { fg = colors.green, bg = "NONE" },
-  DiffDelete = { fg = colors.red, bg = "NONE" },
-  DiffChange = { fg = colors.green, bg = "NONE", underline = true },
-  DiffText = { link = "DiffChange" },
-  MiniDiffSignAdd = { link = "DiffAdd" },
-  MiniDiffSignChange = { fg = colors.yellow },
-  MiniDiffSignDelete = { link = "DiffDelete" },
-  MiniDiffOverAdd = { bg = blend(colors.green, 0.12) },
-  MiniDiffOverDelete = { link = "DiffDelete" },
-  MiniDiffOverChange = { fg = colors.red, bg = "NONE", underline = true },
-  MiniDiffOverChangeBuf = { bg = blend(colors.green, 0.12), underline = true },
-  MiniDiffOverContext = { link = "Normal" },
-  MiniDiffOverContextBuf = { bg = theme.background },
-}
+-- One Dark Pro supplies syntax colors and mini.diff overlay highlights.
+require("onedarkpro").setup({
+  plugins = {
+    all = false,
+    treesitter = true,
+    mini_diff = true,
+  },
+  -- Subtle diff backgrounds preserve syntax colors on the edited text.
+  highlights = {
+    MiniDiffSignAdd = { fg = "#b3e08d" },
+    MiniDiffSignDelete = { fg = "#e06c75" },
+    MiniDiffOverAdd = { bg = "#313a33" },
+    MiniDiffOverDelete = { fg = "#cf858c", bg = "#342e33" },
+    MiniDiffOverChange = { fg = "#e06c75", bg = "#403138" },
+    MiniDiffOverChangeBuf = { bg = "#384438", bold = true },
+    MiniDiffOverContext = { fg = "#b98b92", bg = "#342e33" },
+    MiniDiffOverContextBuf = { bg = "#313a33" },
+  },
+})
 vim.cmd("syntax enable")
-for group, style in pairs(highlights) do
-  vim.api.nvim_set_hl(0, group, style)
-end
+vim.cmd("colorscheme onedark")
 
 vim.api.nvim_create_autocmd("FileType", {
   pattern = { "nix", "rust" },
