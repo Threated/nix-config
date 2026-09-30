@@ -43,6 +43,8 @@ in
 
             if ${lib.getExe pkgs.neovim-unwrapped} --noplugin -n -i NONE \
               --cmd 'set runtimepath^=${pkgs.vimPlugins.mini-diff}' \
+              --cmd 'set runtimepath^=${pkgs.vimPlugins.plenary-nvim}' \
+              --cmd 'set runtimepath^=${pkgs.vimPlugins.telescope-nvim}' \
               --cmd 'set runtimepath^=${pkgs.vimPlugins.onedarkpro-nvim}' \
               --cmd 'set runtimepath^=${treesitter}' \
               -u ${pkgs.writeText "jj-diff-editor.lua" (builtins.readFile ./jj-diff-editor.lua)} \
@@ -86,11 +88,47 @@ in
           runtimeInputs = [ pkgs.coreutils pkgs.findutils pkgs.jq ];
           text = ''
             capture_diff() {
-              rm -rf "$JJUI_DIFF_SESSION/left" "$JJUI_DIFF_SESSION/right"
+              if [[ -n "''${JJUI_DIFF_PATH:-}" ]]; then
+                rm -f -- "$JJUI_DIFF_SESSION/left/$JJUI_DIFF_PATH" "$JJUI_DIFF_SESSION/right/$JJUI_DIFF_PATH"
+              fi
               mkdir -p "$JJUI_DIFF_SESSION/left" "$JJUI_DIFF_SESSION/right"
               jj diffedit -r "$JJUI_DIFF_REVISION" "$JJUI_DIFF_FILESET" --tool jjui-copy \
                 --config 'merge-tools.jjui-copy.program="${lib.getExe copySnapshot}"' \
                 --config "merge-tools.jjui-copy.edit-args=[\"\$left\", \"\$right\"]" \
+                --config ui.diff-instructions=false
+              # Keep an unchanged file editable after its final hunk is moved.
+              if [[ -n "''${JJUI_DIFF_PATH:-}" && ! -e "$JJUI_DIFF_SESSION/left/$JJUI_DIFF_PATH" && ! -e "$JJUI_DIFF_SESSION/right/$JJUI_DIFF_PATH" ]]; then
+                if [[ -n "$(jj file list -r "$JJUI_DIFF_REVISION" "$JJUI_DIFF_FILESET")" ]]; then
+                  mkdir -p "$(dirname "$JJUI_DIFF_SESSION/right/$JJUI_DIFF_PATH")" "$(dirname "$JJUI_DIFF_SESSION/left/$JJUI_DIFF_PATH")"
+                  jj file show -r "$JJUI_DIFF_REVISION" "$JJUI_DIFF_FILESET" > "$JJUI_DIFF_SESSION/right/$JJUI_DIFF_PATH"
+                  cp "$JJUI_DIFF_SESSION/right/$JJUI_DIFF_PATH" "$JJUI_DIFF_SESSION/left/$JJUI_DIFF_PATH"
+                fi
+              fi
+            }
+
+            file_base() {
+              if [[ ! -f "$JJUI_DIFF_SESSION/right/$JJUI_DIFF_PATH" ]]; then
+                while IFS= read -r parent; do
+                  if [[ -n "$(jj file list -r "commit_id(\"$parent\")" "$JJUI_DIFF_FILESET")" ]]; then
+                    JJUI_DIFF_BASE="commit_id(\"$parent\")"
+                    break
+                  fi
+                done < <(jj log --no-graph -r "parents($JJUI_DIFF_REVISION)" -T 'commit_id ++ "\n"')
+              fi
+            }
+
+            stage_edits() {
+              local baseline='root()'
+              if [[ -z "$(jj --at-operation "$operation" file list -r "$JJUI_DIFF_REVISION" "$JJUI_DIFF_FILESET")" ]]; then
+                baseline="$JJUI_DIFF_BASE"
+              fi
+              export JJUI_HUNK_SELECTION="$JJUI_DIFF_SESSION/right/$JJUI_DIFF_PATH"
+              export JJUI_HUNK_DELETE=false
+              if [[ ! -f "$JJUI_HUNK_SELECTION" ]]; then JJUI_HUNK_DELETE=true; fi
+              stage diffedit --from "$baseline" --to "$JJUI_DIFF_REVISION" "$JJUI_DIFF_FILESET" \
+                --tool jjui-select \
+                --config 'merge-tools.jjui-select.program="${lib.getExe selectFile}"' \
+                --config "merge-tools.jjui-select.edit-args=[\"\$left\", \"\$right\"]" \
                 --config ui.diff-instructions=false
             }
 
@@ -123,24 +161,30 @@ in
             if [[ "$1" == --action ]]; then
               direction="$2"
               case "$direction" in
+                load)
+                  JJUI_DIFF_BASE="''${JJUI_DIFF_INITIAL:-$JJUI_DIFF_BASE}"
+                  capture_diff
+                  file_base
+                  jq -n --arg base "$JJUI_DIFF_BASE" '{base: $base}'
+                  exit 0
+                  ;;
                 apply|before|after) ;;
                 *) echo "Invalid diff editor action" >&2; exit 1 ;;
               esac
               # Comparing against root includes unchanged files too, so they
               # remain editable after the last hunk has been extracted.
-              baseline='root()'
-              if [[ -z "$(jj file list -r "$JJUI_DIFF_REVISION" "$JJUI_DIFF_FILESET")" ]]; then
-                baseline="$JJUI_DIFF_BASE"
-              fi
-              export JJUI_HUNK_SELECTION="$JJUI_DIFF_SESSION/right/$JJUI_DIFF_PATH"
-              export JJUI_HUNK_DELETE=false
-              if [[ ! -f "$JJUI_HUNK_SELECTION" ]]; then JJUI_HUNK_DELETE=true; fi
+              jj log --no-graph -r "$JJUI_DIFF_REVISION" -T '""' > /dev/null
               operation=$(jj op log --no-graph -n 1 -T id)
-              stage diffedit --from "$baseline" --to "$JJUI_DIFF_REVISION" "$JJUI_DIFF_FILESET" \
-                --tool jjui-select \
-                --config 'merge-tools.jjui-select.program="${lib.getExe selectFile}"' \
-                --config "merge-tools.jjui-select.edit-args=[\"\$left\", \"\$right\"]" \
-                --config ui.diff-instructions=false
+              if [[ "$direction" == apply && -n "''${JJUI_DIFF_APPLY:-}" ]]; then
+                while IFS= read -r file; do
+                  JJUI_DIFF_PATH=$(jq -r .path <<< "$file")
+                  JJUI_DIFF_BASE=$(jq -r .base <<< "$file")
+                  JJUI_DIFF_FILESET="file:$(jq -c .path <<< "$file")"
+                  stage_edits
+                done < <(jq -c '.[]' <<< "$JJUI_DIFF_APPLY")
+              else
+                stage_edits
+              fi
               if [[ "$direction" != apply ]]; then
                 case "$direction" in
                   before) placement=--insert-before ;;
@@ -176,16 +220,6 @@ in
                 accept_operation
                 printf '%s' "$destination" > "$destination_file"
                 capture_diff
-                # jj materializes only changed paths. If this file now has no
-                # diff, load its unchanged contents into both editor trees.
-                if [[ ! -e "$JJUI_DIFF_SESSION/left/$JJUI_DIFF_PATH" && ! -e "$JJUI_DIFF_SESSION/right/$JJUI_DIFF_PATH" ]]; then
-                  if [[ -n "$(jj file list -r "$JJUI_DIFF_REVISION" "$JJUI_DIFF_FILESET")" ]]; then
-                    mkdir -p "$(dirname "$JJUI_DIFF_SESSION/right/$JJUI_DIFF_PATH")"
-                    jj file show -r "$JJUI_DIFF_REVISION" "$JJUI_DIFF_FILESET" > "$JJUI_DIFF_SESSION/right/$JJUI_DIFF_PATH"
-                    mkdir -p "$(dirname "$JJUI_DIFF_SESSION/left/$JJUI_DIFF_PATH")"
-                    cp "$JJUI_DIFF_SESSION/right/$JJUI_DIFF_PATH" "$JJUI_DIFF_SESSION/left/$JJUI_DIFF_PATH"
-                  fi
-                fi
               else
                 accept_operation
               fi
@@ -207,6 +241,8 @@ in
             export JJUI_DIFF_REVISION="change_id(\"$change_id\")"
             initial_commit=$(jj log --no-graph -r "$JJUI_DIFF_REVISION" -T commit_id)
             export JJUI_DIFF_BASE="commit_id(\"$initial_commit\")"
+            export JJUI_DIFF_INITIAL="$JJUI_DIFF_BASE"
+            unset JJUI_DIFF_PATH JJUI_DIFF_APPLY
             capture_diff
             mapfile -d "" -t paths < <(
               find "$session_dir/left" "$session_dir/right" \
@@ -217,16 +253,7 @@ in
               exit 1
             fi
             export JJUI_DIFF_PATH="''${paths[0]}"
-            if [[ ! -f "$session_dir/right/$JJUI_DIFF_PATH" ]]; then
-              # A deleted file needs a baseline which still contains that path
-              # if the user later recreates it in the same editor session.
-              while IFS= read -r parent; do
-                if [[ -n "$(jj file list -r "commit_id(\"$parent\")" "$JJUI_DIFF_FILESET")" ]]; then
-                  JJUI_DIFF_BASE="commit_id(\"$parent\")"
-                  break
-                fi
-              done < <(jj log --no-graph -r "parents($JJUI_DIFF_REVISION)" -T 'commit_id ++ "\n"')
-            fi
+            file_base
             if ${lib.getExe self'.packages.jj-diff-editor} "$session_dir/left" "$session_dir/right" "$line"; then
               exit 0
             elif [[ -f "$JJUI_DIFF_DISCARDED" ]]; then
