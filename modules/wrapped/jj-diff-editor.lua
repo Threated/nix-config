@@ -88,7 +88,11 @@ vim.api.nvim_create_autocmd("BufWritePre", {
 
 local function save_edits(all)
   for _, file in pairs(files) do
-    if (all or file.buf == modified_buf) and vim.bo[file.buf].modified then
+    -- Undo can restore an added file's original text without marking the
+    -- buffer modified, while its private on-disk copy is still absent.
+    local restored = vim.fn.filereadable(buffer_path(file.buf)) == 0
+      and (vim.api.nvim_buf_line_count(file.buf) > 1 or vim.api.nvim_buf_get_lines(file.buf, 0, 1, false)[1] ~= "")
+    if (all or file.buf == modified_buf) and (vim.bo[file.buf].modified or restored) then
       vim.api.nvim_buf_call(file.buf, function() vim.cmd.write() end)
     end
   end
@@ -127,10 +131,13 @@ local function read_diff()
   if reference_eol then table.remove(reference) end
   local edited = vim.api.nvim_buf_get_lines(modified_buf, 0, -1, false)
   local deleted = vim.fn.filereadable(buffer_path(modified_buf)) == 0 and not vim.bo[modified_buf].modified
+    and #edited == 1 and edited[1] == ""
+  if deleted then edited = {} end
   local edited_text = deleted and "" or table.concat(edited, "\n") .. (vim.bo[modified_buf].endofline and "\n" or "")
   local options = MiniDiff.get_buf_data(modified_buf).config.options
   return {
     reference = reference, reference_eol = reference_eol, edited = edited, deleted = deleted,
+    reference_exists = vim.fn.filereadable(original) == 1,
     hunks = vim.text.diff(reference_text, edited_text, {
       result_type = "indices", algorithm = options.algorithm,
       indent_heuristic = options.indent_heuristic, linematch = options.linematch,
@@ -238,25 +245,61 @@ vim.api.nvim_create_autocmd("ModeChanged", {
   pattern = "*:*",
   callback = function()
     local selecting = vim.fn.mode() == "V"
-    vim.opt.statusline = selecting and " j/k: select hunks | Ctrl j/k: extract below/above | Esc: cancel " or normal_statusline
+    vim.opt.statusline = selecting and " j/k: select hunks | Ctrl j/k: extract below/above | d: revert | Esc: cancel " or normal_statusline
     if not adjusting_selection and not selecting then clear_selection() end
   end,
 })
+
+local function selected_hunks()
+  assert(selection and vim.fn.mode() == "V", "Select hunks with v first")
+  local low, high = math.min(selection.anchor, selection.active), math.max(selection.anchor, selection.active)
+  local data = selection.data
+  local first = hunk_bounds(data.hunks[low])
+  local _, last = hunk_bounds(data.hunks[high])
+  local visual_start, visual_end = vim.fn.line("v"), vim.fn.line(".")
+  assert(math.min(visual_start, visual_end) == first and math.max(visual_start, visual_end) == last,
+    "Use j/k to adjust the whole-hunk selection")
+  return data, low, high
+end
+
+local function revert_selection()
+  local ok, err = pcall(function()
+    local data, low, high = selected_hunks()
+    local restored, next_edited = {}, 1
+    for index = low, high do
+      local ref_start, ref_count, buf_start, buf_count = unpack(data.hunks[index])
+      local prefix = buf_count == 0 and buf_start or buf_start - 1
+      for i = next_edited, prefix do restored[#restored + 1] = data.edited[i] end
+      for i = ref_start, ref_start + ref_count - 1 do restored[#restored + 1] = data.reference[i] end
+      next_edited = prefix + buf_count + 1
+    end
+    for i = next_edited, #data.edited do restored[#restored + 1] = data.edited[i] end
+    local eol = vim.bo[modified_buf].endofline
+    if next_edited > #data.edited then eol = data.reference_eol end
+    vim.cmd("normal! " .. string.char(27))
+    clear_selection()
+    -- One buffer edit keeps the whole revert undoable with u.
+    vim.api.nvim_buf_set_lines(modified_buf, 0, -1, false, restored)
+    if data.reference_exists or #restored > 0 then vim.bo[modified_buf].endofline = eol end
+    if not data.reference_exists and #restored == 0 then
+      -- Reverting every line of an added file removes the private file too.
+      if vim.fn.filereadable(buffer_path(modified_buf)) == 1 then
+        assert(vim.fn.delete(buffer_path(modified_buf)) == 0, "Could not revert the added file")
+      end
+      vim.bo[modified_buf].modified = false
+    end
+    refresh_diff(false)
+  end)
+  if not ok then vim.notify(tostring(err), vim.log.levels.ERROR) end
+end
 
 -- Build the parent snapshot with every selected hunk applied. Unselected
 -- changes stay in the source, even when the selection spans unchanged context.
 local function split_selection(direction)
   local request = vim.env.JJUI_HUNK_REQUEST
   local ok, err = pcall(function()
-    assert(selection and vim.fn.mode() == "V", "Select hunks with v before extracting")
     assert(request and vim.env.JJUI_HUNK_SELECTION, "Hunk splitting requires opening the editor from jjui")
-    local low, high = math.min(selection.anchor, selection.active), math.max(selection.anchor, selection.active)
-    local data = selection.data
-    local first = hunk_bounds(data.hunks[low])
-    local _, last = hunk_bounds(data.hunks[high])
-    local visual_start, visual_end = vim.fn.line("v"), vim.fn.line(".")
-    assert(math.min(visual_start, visual_end) == first and math.max(visual_start, visual_end) == last,
-      "Use j/k to adjust the whole-hunk selection")
+    local data, low, high = selected_hunks()
     local snapshot, next_reference = {}, 1
     for index = low, high do
       local ref_start, ref_count, buf_start, buf_count = unpack(data.hunks[index])
@@ -318,6 +361,7 @@ local function editor_maps()
   map("x", "<C-v>", "<Nop>")
   map("x", "<C-j>", function() split_selection("before") end)
   map("x", "<C-k>", function() split_selection("after") end)
+  map("x", "d", revert_selection)
 
   map("n", "<C-j>", function() MiniDiff.goto_hunk("next") end)
   map("n", "<C-k>", function() MiniDiff.goto_hunk("prev") end)

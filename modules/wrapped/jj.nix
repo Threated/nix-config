@@ -236,7 +236,9 @@ in
               fi
               export JJUI_DIFF_FILESET
               JJUI_DIFF_FILESET="file:$(jq -cn --arg path "''${changed_paths[0]}" '$path')"
-              export JJUI_DIFF_PICKER=true
+              if (( ''${#changed_paths[@]} > 1 )); then
+                export JJUI_DIFF_PICKER=true
+              fi
               line=1
             else
               revision="$1"
