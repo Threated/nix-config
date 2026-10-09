@@ -205,6 +205,8 @@
     networking.nftables.enable = true;
     networking.firewall = {
       enable = true;
+      # Allow local development sites from devices on Wi-Fi.
+      interfaces.wlo1.allowedTCPPorts = [ 3000 ];
       # Always allow traffic from your Tailscale network
       trustedInterfaces = [ "tailscale0" ];
       # Allow the Tailscale UDP port through the firewall
