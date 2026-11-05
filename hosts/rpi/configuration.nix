@@ -16,6 +16,8 @@
     networking = {
       hostName = "rpi";
       useNetworkd = true;
+      # Keep the interface name used by the DHCP configuration below.
+      usePredictableInterfaceNames = false;
       useDHCP = false;
       interfaces.eth0.useDHCP = true;
       firewall.enable = true;
