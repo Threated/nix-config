@@ -69,6 +69,57 @@ Application settings come from Nix. Public signup is disabled, and email
 addresses on administrator-managed accounts are treated as verified without
 an SMTP verification flow.
 
+## Tailscale SSH policy
+
+`headscale-policy.json` defines network grants and Tailscale SSH authorization.
+The network grant preserves the existing allow-all behavior between VPN peers.
+The SSH rule allows the Headscale account `Threated` (`Threated@` in policy
+syntax) to connect to its own untagged devices (`autogroup:self`) as the existing
+Linux account `threated`. It grants no SSH login as root or other local users.
+
+On the destination, Tailscale SSH must also be enabled (`tailscale set --ssh`);
+the laptop already has it enabled. From the phone's SSH client, connect to
+`threated@nixos.tail.threated.dedyn.io` or `threated@100.64.0.1` while Tailscale
+is connected. Authentication uses the device's Headscale identity, so this
+does not require copying an SSH private key to the phone.
+
+Edit the policy file and rebuild `.#rpi` to change access. `src` selects the
+connecting Headscale identity, `dst` selects destination devices, and `users`
+lists allowed Linux login names. The NixOS configuration sets
+`services.headscale.settings.policy.path` to this file in the Nix store.
+Validate changes against live users and nodes with
+`sudo headscale policy check --file /path/to/headscale-policy.json` on the Pi.
+
+Reference: https://headscale.net/stable/ref/policy/
+
+## Pi VPN access and exit node
+
+The Pi runs tailscaled as a native service, owned by the same Headscale account
+as the laptop and phone. It advertises an exit node and enables IPv4/IPv6
+forwarding. Headscale must also approve its default routes once; the approval
+is retained in Headscale's database. Its Tailscale identity is retained in
+`/var/lib/tailscale`; no reusable enrollment key is stored in the repository.
+The Pi keeps using its existing DNS rather than accepting VPN DNS settings.
+
+For SSH from another connected device:
+
+```sh
+ssh threated@rpi.tail.threated.dedyn.io
+```
+
+To select the Pi as the laptop's exit node, and later stop using it:
+
+```sh
+sudo tailscale set --exit-node=rpi --exit-node-allow-lan-access=true
+sudo tailscale set --exit-node= --exit-node-allow-lan-access=false
+```
+
+On Android, open Tailscale, choose **Exit node**, and select **rpi**. Select
+**None** to return to the phone's usual internet connection. Exit-node use is
+optional and is not selected automatically on either client.
+
+Reference: https://headscale.net/stable/ref/routes/
+
 ## Router and DNS
 
 Forward WAN TCP 80 and 443 to `192.168.2.221`. Caddy obtains and renews public
@@ -93,8 +144,9 @@ unpatched `kfree()` calls described by CVE-2026-98432, in `inet_sock_destruct()`
 and `tcp_v4_reqsk_destructor()`. The configured kernel patches do not fix them.
 This assessment did not run an exploit against the server.
 
-`security.nix` persists an INPUT filter dropping IPv4 TCP packets with IPv4
-options, ahead of the normal stateful firewall. Standard TCP options and IPv6
+`security.nix` persists a raw PREROUTING filter dropping IPv4 TCP packets with
+IPv4 options, ahead of Tailscale's accept rules and the stateful firewall.
+Standard TCP options and IPv6
 are unaffected. This is a temporary exposure reduction, not a kernel fix.
 Replace the kernel with a tested vendor build containing the RCU fixes
 (upstream 6.18.56 or a backport), reboot, verify the running kernel, and then

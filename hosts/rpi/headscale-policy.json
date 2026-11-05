@@ -1,0 +1,17 @@
+{
+  "grants": [
+    {
+      "src": ["*"],
+      "dst": ["*"],
+      "ip": ["*"]
+    }
+  ],
+  "ssh": [
+    {
+      "action": "accept",
+      "src": ["Threated@"],
+      "dst": ["autogroup:self"],
+      "users": ["threated"]
+    }
+  ]
+}

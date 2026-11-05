@@ -200,6 +200,7 @@
     # 1. Enable the service and the firewall
     services.tailscale.enable = true;
     services.tailscale.package = pkgs.tailscale;
+    services.tailscale.useRoutingFeatures = "client";
     # Interactive enrollment (the selected server and identity persist in
     # /var/lib/tailscale across rebuilds and reboots):
     # sudo tailscale login --login-server=https://headscale.threated.dedyn.io --ssh

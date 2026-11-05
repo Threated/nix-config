@@ -86,6 +86,10 @@
           metrics_listen_addr = "127.0.0.1:9090";
           grpc_listen_addr = "127.0.0.1:50443";
           trusted_proxies = [ "127.0.0.1/32" ];
+          policy = {
+            mode = "file";
+            path = ./headscale-policy.json;
+          };
           # Keep clients' existing resolvers; MagicDNS only names VPN peers.
           dns = {
             base_domain = "tail.threated.dedyn.io";

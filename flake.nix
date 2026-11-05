@@ -58,6 +58,7 @@
         ./hosts/rpi/web-services.nix
         ./hosts/rpi/security.nix
         ./hosts/rpi/dynamic-dns.nix
+        ./hosts/rpi/tailscale.nix
         ./modules/wrapped/jj.nix
         ./modules/wrapped/niri.nix
         ./modules/wrapped/noctalia.nix
