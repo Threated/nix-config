@@ -1,6 +1,9 @@
-{ ... }:
+{ pkgs, ... }:
 {
   nixpkgs.hostPlatform = "aarch64-linux";
+
+  # Use the official binary cache instead of compiling the profile's vendor kernel.
+  boot.kernelPackages = pkgs.linuxPackages_latest;
 
   # Reuse the existing microSD partitions during the migration.
   fileSystems."/" = {
