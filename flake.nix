@@ -10,6 +10,10 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixos-hardware = {
+      url = "github:NixOS/nixos-hardware";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     flake-parts.url = "github:hercules-ci/flake-parts";
     wrapper-modules.url = "github:BirdeeHub/nix-wrapper-modules";
     wrapper-modules.inputs.nixpkgs.follows = "nixpkgs";
@@ -43,6 +47,7 @@
       imports = [
         ./modules/theme.nix
         ./hosts/laptop/configuration.nix
+        ./hosts/rpi/configuration.nix
         ./modules/wrapped/jj.nix
         ./modules/wrapped/niri.nix
         ./modules/wrapped/noctalia.nix
