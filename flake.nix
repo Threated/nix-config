@@ -50,6 +50,7 @@
         ./modules/theme.nix
         ./hosts/laptop/configuration.nix
         ./hosts/rpi/configuration.nix
+        ./hosts/rpi/pihole.nix
         ./modules/wrapped/jj.nix
         ./modules/wrapped/niri.nix
         ./modules/wrapped/noctalia.nix
