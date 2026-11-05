@@ -4,6 +4,9 @@
 
   # Use the official binary cache instead of compiling the profile's vendor kernel.
   boot.kernelPackages = pkgs.linuxPackages_latest;
+  # The mainline kernel needs its matching device tree, not the vendor tree
+  # passed to U-Boot by the Pi firmware.
+  boot.loader.generic-extlinux-compatible.useGenerationDeviceTree = true;
 
   # Reuse the existing microSD partitions during the migration.
   fileSystems."/" = {
