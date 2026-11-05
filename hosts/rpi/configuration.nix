@@ -22,6 +22,12 @@
       interfaces.eth0.useDHCP = true;
       firewall.enable = true;
     };
+    # The Speedport grants the existing IPv4 lease when identified by MAC.
+    systemd.network.networks."40-eth0".dhcpV4Config.ClientIdentifier = "mac";
+
+    # The vendor rule refers to Raspberry Pi OS's sudo group; NixOS uses wheel.
+    environment.etc."tmpfiles.d/sys-kernel-debug.conf".text =
+      "d! /sys/kernel/debug 0750 root wheel -\n";
 
     time.timeZone = "Europe/Berlin";
 
