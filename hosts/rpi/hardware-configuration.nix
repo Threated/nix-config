@@ -1,12 +1,6 @@
-{ pkgs, ... }:
+{ ... }:
 {
   nixpkgs.hostPlatform = "aarch64-linux";
-
-  # Use the official binary cache instead of compiling the profile's vendor kernel.
-  boot.kernelPackages = pkgs.linuxPackages_latest;
-  # The mainline kernel needs its matching device tree, not the vendor tree
-  # passed to U-Boot by the Pi firmware.
-  boot.loader.generic-extlinux-compatible.useGenerationDeviceTree = true;
 
   # Reuse the existing microSD partitions during the migration.
   fileSystems."/" = {
@@ -19,9 +13,9 @@
     options = [ "umask=0077" ];
   };
 
-  hardware.raspberry-pi.firmware = {
-    enable = true;
-    uboot.enable = true;
+  # Boot the matched vendor kernel directly through the Pi firmware.
+  boot.loader.raspberry-pi = {
+    bootloader = "kernel";
+    configurationLimit = 5;
   };
-  boot.loader.generic-extlinux-compatible.configurationLimit = 5;
 }

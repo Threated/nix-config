@@ -1,8 +1,8 @@
 { self, inputs, ... }:
 {
-  flake.nixosConfigurations.rpi = inputs.nixpkgs.lib.nixosSystem {
+  flake.nixosConfigurations.rpi = inputs.nixos-raspberrypi.lib.nixosSystem {
     modules = [
-      inputs.nixos-hardware.nixosModules.raspberry-pi-5
+      inputs.nixos-raspberrypi.nixosModules.raspberry-pi-5.base
       self.nixosModules.rpi
     ];
   };
@@ -44,7 +44,10 @@
       };
     };
 
-    services.journald.settings.Journal.SystemMaxUse = "250M";
+    services.journald = {
+      storage = "persistent";
+      extraConfig = "SystemMaxUse=250M";
+    };
     nix = {
       settings.experimental-features = [ "nix-command" "flakes" ];
       gc = {
