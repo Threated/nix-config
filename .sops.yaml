@@ -1,0 +1,9 @@
+keys:
+  - &threated age1zrpgq8wsdcutgu6rmj63n4pq8k7vsfce7nkydhkuvfht3mcdnqnq4tw2u0
+  - &rpi age1zfxaavhdyyw408g9mg87ytkp80k0r2jyndx4uqac56efqt26lp7qc8hreg
+creation_rules:
+  - path_regex: secrets/rpi\.yaml$
+    key_groups:
+      - age:
+          - *threated
+          - *rpi

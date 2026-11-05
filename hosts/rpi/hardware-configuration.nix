@@ -16,6 +16,7 @@
   # Boot the matched vendor kernel directly through the Pi firmware.
   boot.loader.raspberry-pi = {
     bootloader = "kernel";
-    configurationLimit = 5;
+    # Leave room for atomic boot-file updates on the 510 MiB firmware partition.
+    configurationLimit = 3;
   };
 }

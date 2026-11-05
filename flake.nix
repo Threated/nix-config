@@ -16,6 +16,10 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     # Keep its own nixpkgs pin so the Pi kernel and firmware match its cache.
     nixos-raspberrypi.url = "github:nvmd/nixos-raspberrypi/main";
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     flake-parts.url = "github:hercules-ci/flake-parts";
     wrapper-modules.url = "github:BirdeeHub/nix-wrapper-modules";
     wrapper-modules.inputs.nixpkgs.follows = "nixpkgs";
@@ -51,6 +55,9 @@
         ./hosts/laptop/configuration.nix
         ./hosts/rpi/configuration.nix
         ./hosts/rpi/pihole.nix
+        ./hosts/rpi/web-services.nix
+        ./hosts/rpi/security.nix
+        ./hosts/rpi/dynamic-dns.nix
         ./modules/wrapped/jj.nix
         ./modules/wrapped/niri.nix
         ./modules/wrapped/noctalia.nix
