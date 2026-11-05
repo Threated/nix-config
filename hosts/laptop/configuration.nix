@@ -200,7 +200,16 @@
     # 1. Enable the service and the firewall
     services.tailscale.enable = true;
     services.tailscale.package = pkgs.tailscale;
-    services.tailscale.extraUpFlags = [ "--ssh" ];
+    # Interactive enrollment (the selected server and identity persist in
+    # /var/lib/tailscale across rebuilds and reboots):
+    # sudo tailscale login --login-server=https://headscale.threated.dedyn.io --ssh
+    # These flags also apply if authKeyFile is added for automatic enrollment.
+    services.tailscale.extraUpFlags = [
+      "--ssh"
+      "--login-server=https://headscale.threated.dedyn.io"
+    ];
+    # The nftables backend creates NAT chains even for an ordinary VPN client.
+    boot.kernelModules = [ "nft_chain_nat" ];
 
     networking.nftables.enable = true;
     networking.firewall = {
