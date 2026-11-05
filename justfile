@@ -1,0 +1,26 @@
+set positional-arguments
+
+# List available commands.
+default:
+    @just --list
+
+# Build on the Pi and deploy its NixOS configuration.
+deploy-rpi:
+    NIX_SSHOPTS='-o BatchMode=yes -o HostKeyAlias=raspberrypi -o IdentitiesOnly=yes -i ~/.ssh/id_ed25519' nixos-rebuild switch --flake .#rpi --build-host threated@192.168.2.221 --target-host threated@192.168.2.221 --elevate sudo --no-reexec
+
+# Edit encrypted secrets using your Ed25519 SSH identity.
+secrets file="secrets/rpi.yaml": (_sops "edit" file)
+
+# Apply recipient changes from .sops.yaml to an encrypted secrets file.
+secrets-updatekeys file="secrets/rpi.yaml": (_sops "updatekeys" file)
+
+[private]
+_sops action file:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    nix shell --inputs-from . nixpkgs#sops nixpkgs#ssh-to-age --command bash -eu -c '
+        SOPS_AGE_KEY="$(ssh-to-age -private-key -i "$HOME/.ssh/id_ed25519")"
+        export SOPS_AGE_KEY
+        # Closing the editor without changes is a successful no-op.
+        sops "$@" || { status=$?; [[ "$status" -eq 200 ]] || exit "$status"; }
+    ' -- "$@"
