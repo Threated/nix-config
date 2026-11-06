@@ -1,11 +1,12 @@
 set positional-arguments
+set dotenv-load
 
 # List available commands.
 default:
     @just --list
 
 # Build on the Pi and deploy its NixOS configuration.
-deploy-rpi assistant="":
+deploy-rpi assistant=env("ASSISTANT_PATH", ""):
     #!/usr/bin/env bash
     set -euo pipefail
     override=()

@@ -15,4 +15,5 @@ Tailscale DERP map for fallback relays. MagicDNS names peers under
 
 Run `just` from the repository to list deployment and secret-management commands.
 Use `just deploy-rpi /path/to/private/assistant` to include the optional assistant;
-without that argument, the public base configuration is deployed.
+the argument defaults to `ASSISTANT_PATH` from an optional, ignored `.env` file.
+With no path configured, or with `just deploy-rpi ""`, the public base is deployed.
