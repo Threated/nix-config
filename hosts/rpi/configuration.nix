@@ -11,6 +11,7 @@
     imports = [
       (modulesPath + "/profiles/minimal.nix")
       ./hardware-configuration.nix
+        inputs.assistant.nixosModules.default
     ];
 
     networking = {

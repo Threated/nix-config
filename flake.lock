@@ -16,6 +16,22 @@
         "type": "github"
       }
     },
+    "assistant": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "path": "./inputs/assistant",
+        "type": "path"
+      },
+      "original": {
+        "path": "./inputs/assistant",
+        "type": "path"
+      },
+      "parent": []
+    },
     "codex-cli-nix": {
       "inputs": {
         "flake-utils": "flake-utils",
@@ -251,6 +267,7 @@
     },
     "root": {
       "inputs": {
+        "assistant": "assistant",
         "codex-cli-nix": "codex-cli-nix",
         "flake-parts": "flake-parts",
         "nixos-raspberrypi": "nixos-raspberrypi",

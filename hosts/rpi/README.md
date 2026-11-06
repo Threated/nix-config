@@ -14,3 +14,5 @@ Tailscale DERP map for fallback relays. MagicDNS names peers under
 `tail.threated.dedyn.io`; it does not override clients' existing DNS resolvers.
 
 Run `just` from the repository to list deployment and secret-management commands.
+Use `just deploy-rpi /path/to/private/assistant` to include the optional assistant;
+without that argument, the public base configuration is deployed.

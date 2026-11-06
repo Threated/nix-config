@@ -5,8 +5,15 @@ default:
     @just --list
 
 # Build on the Pi and deploy its NixOS configuration.
-deploy-rpi:
-    NIX_SSHOPTS='-o BatchMode=yes -o HostKeyAlias=raspberrypi -o IdentitiesOnly=yes -i ~/.ssh/id_ed25519' nixos-rebuild switch --flake .#rpi --build-host threated@192.168.2.221 --target-host threated@192.168.2.221 --elevate sudo --no-reexec
+deploy-rpi assistant="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    override=()
+    if [[ -n "$1" ]]; then
+        override=(--override-input assistant "$(realpath "$1")" --no-write-lock-file)
+    fi
+    export NIX_SSHOPTS='-o BatchMode=yes'
+    nixos-rebuild switch --flake .#rpi --build-host threated@rpi --target-host threated@rpi --elevate sudo --no-reexec "${override[@]}"
 
 # Edit encrypted secrets using your Ed25519 SSH identity.
 secrets file="secrets/rpi.yaml": (_sops "edit" file)
