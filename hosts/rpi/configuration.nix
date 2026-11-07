@@ -7,7 +7,7 @@
     ];
   };
 
-  flake.nixosModules.rpi = { modulesPath, ... }: {
+  flake.nixosModules.rpi = { config, modulesPath, ... }: {
     imports = [
       (modulesPath + "/profiles/minimal.nix")
       ./hardware-configuration.nix
@@ -57,13 +57,24 @@
       extraConfig = "SystemMaxUse=250M";
     };
     nix = {
-      settings.experimental-features = [ "nix-command" "flakes" ];
+      settings = {
+        experimental-features = [ "nix-command" "flakes" ];
+        auto-optimise-store = true;
+        # Collect unreferenced paths when free space falls below 1 GiB,
+        # aiming to restore 3 GiB without pruning rollback generations.
+        min-free = 1024 * 1024 * 1024;
+        max-free = 3 * 1024 * 1024 * 1024;
+      };
       gc = {
         automatic = true;
-        dates = "weekly";
-        options = "--delete-older-than 14d";
+        dates = "03:15";
       };
     };
+    # Prune by generation count before the scheduled garbage collection.
+    # Keep the current system and two predecessors before collecting garbage.
+    systemd.services.nix-gc.preStart = ''
+      ${config.nix.package}/bin/nix-env --profile /nix/var/nix/profiles/system --delete-generations +3
+    '';
 
     system.stateVersion = "26.05";
   };
