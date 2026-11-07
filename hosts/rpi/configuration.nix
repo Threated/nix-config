@@ -11,7 +11,8 @@
     imports = [
       (modulesPath + "/profiles/minimal.nix")
       ./hardware-configuration.nix
-        inputs.assistant.nixosModules.default
+      inputs.assistant.nixosModules.default
+      inputs.hue-music.nixosModules.default
     ];
 
     networking = {

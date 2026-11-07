@@ -24,6 +24,10 @@
       url = "path:./inputs/assistant";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    hue-music = {
+      url = "path:./inputs/hue-music";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     flake-parts.url = "github:hercules-ci/flake-parts";
     wrapper-modules.url = "github:BirdeeHub/nix-wrapper-modules";
     wrapper-modules.inputs.nixpkgs.follows = "nixpkgs";

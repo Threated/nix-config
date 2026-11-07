@@ -6,12 +6,18 @@ default:
     @just --list
 
 # Build on the Pi and deploy its NixOS configuration.
-deploy-rpi assistant=env("ASSISTANT_PATH", ""):
+deploy-rpi assistant=env("ASSISTANT_PATH", "") hue_music=env("HUE_MUSIC_PATH", ""):
     #!/usr/bin/env bash
     set -euo pipefail
     override=()
     if [[ -n "$1" ]]; then
-        override=(--override-input assistant "$(realpath "$1")" --no-write-lock-file)
+        override+=(--override-input assistant "$(realpath "$1")")
+    fi
+    if [[ -n "$2" ]]; then
+        override+=(--override-input hue-music "$(realpath "$2")")
+    fi
+    if (( ${#override[@]} )); then
+        override+=(--no-write-lock-file)
     fi
     export NIX_SSHOPTS='-o BatchMode=yes'
     nixos-rebuild switch --flake .#rpi --build-host threated@rpi --target-host threated@rpi --elevate sudo --no-reexec "${override[@]}"

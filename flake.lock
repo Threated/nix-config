@@ -102,6 +102,22 @@
         "type": "github"
       }
     },
+    "hue-music": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "path": "./inputs/hue-music",
+        "type": "path"
+      },
+      "original": {
+        "path": "./inputs/hue-music",
+        "type": "path"
+      },
+      "parent": []
+    },
     "nixos-images": {
       "inputs": {
         "nixos-stable": [
@@ -270,6 +286,7 @@
         "assistant": "assistant",
         "codex-cli-nix": "codex-cli-nix",
         "flake-parts": "flake-parts",
+        "hue-music": "hue-music",
         "nixos-raspberrypi": "nixos-raspberrypi",
         "nixpkgs": "nixpkgs_3",
         "noctalia": "noctalia",
