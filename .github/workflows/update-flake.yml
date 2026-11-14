@@ -14,6 +14,7 @@ concurrency:
 
 jobs:
   update:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -84,7 +85,7 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git switch -C "$branch"
-          git commit -m 'chore: update flake inputs'
+          git -c core.hooksPath=/dev/null commit -m 'chore: update flake inputs'
           git push --force-with-lease origin "$branch"
 
           pr=$(gh pr list --base "$BASE_BRANCH" --head "$branch" --state open \

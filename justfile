@@ -22,6 +22,14 @@ deploy-rpi assistant=env("ASSISTANT_PATH", "") hue_music=env("HUE_MUSIC_PATH", "
     export NIX_SSHOPTS='-o BatchMode=yes'
     nixos-rebuild switch --flake .#rpi --build-host threated@rpi --target-host threated@rpi --elevate sudo --no-reexec "${override[@]}"
 
+# Push committed private sources to the Pi for the next CI deployment.
+push-rpi-inputs assistant=env("ASSISTANT_PATH", "") hue_music=env("HUE_MUSIC_PATH", ""):
+    #!/usr/bin/env bash
+    set -euo pipefail
+    test -n "$1" && test -n "$2"
+    git -C "$1" push rpi HEAD:refs/heads/main
+    git -C "$2" push rpi HEAD:refs/heads/main
+
 # Edit encrypted secrets using your Ed25519 SSH identity.
 secrets file="secrets/rpi.yaml": (_sops "edit" file)
 

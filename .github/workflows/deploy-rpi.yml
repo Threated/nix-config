@@ -1,0 +1,57 @@
+name: Deploy Raspberry Pi
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-rpi
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Connect to Headscale
+        uses: tailscale/github-action@v4
+        with:
+          authkey: ${{ secrets.HEADSCALE_AUTHKEY }}
+          args: --login-server=https://headscale.threated.dedyn.io --accept-dns=false
+
+      - name: Switch the Pi to this commit
+        env:
+          REVISION: ${{ github.sha }}
+          DEPLOY_UNIT: nix-config-deploy-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          tailscale ssh threated@rpi.tail.threated.dedyn.io \
+            sudo -n systemd-run --unit="$DEPLOY_UNIT" --no-block \
+            --property=Type=oneshot --property=RemainAfterExit=yes \
+            --property=TimeoutStartSec=55min \
+            /run/current-system/sw/bin/rpi-deploy "$REVISION"
+
+          deadline=$((SECONDS + 3300))
+          while (( SECONDS < deadline )); do
+            if state=$(timeout 20s tailscale ssh threated@rpi.tail.threated.dedyn.io \
+              systemctl show "$DEPLOY_UNIT" --property=SubState --value); then
+              case "$state" in
+                exited|failed)
+                  tailscale ssh threated@rpi.tail.threated.dedyn.io \
+                    sudo -n journalctl --unit="$DEPLOY_UNIT" --no-pager
+                  if [ "$state" = failed ]; then
+                    exit 1
+                  fi
+                  tailscale ssh threated@rpi.tail.threated.dedyn.io sudo -n systemctl stop "$DEPLOY_UNIT"
+                  exit 0
+                  ;;
+              esac
+            fi
+            sleep 10
+          done
+          echo 'Timed out waiting for the Pi deployment' >&2
+          exit 1

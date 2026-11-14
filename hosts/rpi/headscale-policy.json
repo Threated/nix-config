@@ -1,16 +1,31 @@
 {
+  "tagOwners": {
+    "tag:ci": ["Threated@"],
+    "tag:rpi": ["Threated@"]
+  },
   "grants": [
     {
-      "src": ["*"],
+      "src": ["autogroup:member", "tag:rpi"],
       "dst": ["*"],
       "ip": ["*"]
+    },
+    {
+      "src": ["tag:ci"],
+      "dst": ["tag:rpi"],
+      "ip": ["tcp:22"]
     }
   ],
   "ssh": [
     {
       "action": "accept",
+      "src": ["tag:ci"],
+      "dst": ["tag:rpi"],
+      "users": ["threated"]
+    },
+    {
+      "action": "accept",
       "src": ["Threated@"],
-      "dst": ["autogroup:self"],
+      "dst": ["autogroup:self", "tag:rpi"],
       "users": ["threated"]
     }
   ]

@@ -19,3 +19,13 @@ The optional, ignored `.env` file can set `ASSISTANT_PATH` and `HUE_MUSIC_PATH`
 to private checkouts. `just deploy-rpi` includes whichever paths are configured;
 two optional positional arguments override those paths. `just deploy-rpi "" ""`
 deploys the public base alone. `.env.example` lists the variables.
+
+CI deploys pushes to `main` over Tailscale SSH, using the exact public commit
+and private sources from the Pi's bare repositories in `~/git`. Run
+`just push-rpi-inputs` after committing private changes to update those remotes
+before the next deployment. The workflow also supports manual runs.
+CI requires the `HEADSCALE_AUTHKEY` secret for a reusable, ephemeral Headscale
+key tagged `tag:ci`; renew it before it expires. Deployment requires both private
+repositories and stops if either is missing.
+The CI tag can connect only to TCP port 22 on the Pi. Deployment uses the
+`threated` account's existing sudo access on the Pi.
