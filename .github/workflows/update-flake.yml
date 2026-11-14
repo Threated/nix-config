@@ -15,7 +15,7 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       contents: write
       pull-requests: write
@@ -32,25 +32,51 @@ jobs:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update all flake inputs
-        run: nix flake update
-
-      - name: Check flake outputs
-        run: nix flake check --all-systems --no-build --no-update-lock-file
-
-      - name: Evaluate NixOS configurations
         run: |
-          for host in laptop rpi; do
-            nix eval --raw --no-update-lock-file \
-              ".#nixosConfigurations.${host}.config.system.build.toplevel.drvPath"
-            printf '\n'
-          done
+          nix flake update
+          cp flake.lock "$RUNNER_TEMP/updated-flake.lock"
+
+      - name: Validate updated flake
+        id: check
+        continue-on-error: true
+        shell: bash
+        run: bash .github/scripts/check-flake.sh 2>&1 | tee "$RUNNER_TEMP/flake-check.log"
+
+      - name: Repair failed validation with Gemini
+        if: steps.check.outcome == 'failure'
+        timeout-minutes: 15
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          REPAIR_PROMPT: |
+            The flake inputs in this NixOS repository were just updated, and
+            validation failed. The failure log is provided on stdin.
+            Diagnose the failure and make the smallest source changes needed
+            to fix it. Inspect the repository and run Nix commands as needed.
+            Preserve the updated flake.lock and its dependency revisions.
+            Do not edit .github, disable checks, remove host configurations,
+            or bypass failures. Do not commit, push, create PRs, or deploy.
+            Validate your repair with: bash .github/scripts/check-flake.sh
+            Finish with a brief explanation of the cause and your changes.
+        run: |
+          test -n "$GEMINI_API_KEY" || { echo 'GEMINI_API_KEY is missing'; exit 1; }
+          npx --yes @google/gemini-cli@latest \
+            --model gemini-4-hydrogen --approval-mode yolo --skip-trust \
+            --prompt "$REPAIR_PROMPT" < "$RUNNER_TEMP/flake-check.log"
+
+      - name: Validate repaired flake
+        if: steps.check.outcome == 'failure'
+        run: |
+          git diff --exit-code HEAD -- .github
+          cmp flake.lock "$RUNNER_TEMP/updated-flake.lock"
+          bash .github/scripts/check-flake.sh
 
       - name: Open or update the dependency pull request
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BASE_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          if git diff --quiet -- flake.lock; then
+          git add --all -- flake.lock flake.nix hosts modules inputs
+          if git diff --cached --quiet; then
             exit 0
           fi
 
@@ -58,7 +84,6 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git switch -C "$branch"
-          git add flake.lock
           git commit -m 'chore: update flake inputs'
           git push --force-with-lease origin "$branch"
 
@@ -67,5 +92,5 @@ jobs:
           if [ -z "$pr" ]; then
             gh pr create --base "$BASE_BRANCH" --head "$branch" \
               --title 'chore: update flake inputs' \
-              --body 'Updates all flake inputs. Flake checks and laptop/Pi evaluations passed; full builds and deployments were not performed.'
+              --body 'Updates all flake inputs, including any Gemini repairs needed to pass validation. Flake checks and laptop/Pi evaluations passed; full builds and deployments were not performed.'
           fi
