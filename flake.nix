@@ -1,17 +1,6 @@
 {
   description = "Nix configurations";
 
-  nixConfig = {
-    extra-substituters = [
-      "https://noctalia.cachix.org"
-      "https://nixos-raspberrypi.cachix.org"
-    ];
-    extra-trusted-public-keys = [
-      "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4="
-      "nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI="
-    ];
-  };
-
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     # Keep its own nixpkgs pin so the Pi kernel and firmware match its cache.
@@ -28,6 +17,7 @@
       url = "path:./inputs/hue-music";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    import-tree.url = "github:denful/import-tree";
     flake-parts.url = "github:hercules-ci/flake-parts";
     wrapper-modules.url = "github:BirdeeHub/nix-wrapper-modules";
     wrapper-modules.inputs.nixpkgs.follows = "nixpkgs";
@@ -59,22 +49,9 @@
         };
 
       imports = [
-        ./modules/theme.nix
-        ./hosts/laptop/configuration.nix
-        ./hosts/rpi/configuration.nix
-        ./hosts/rpi/pihole.nix
-        ./hosts/rpi/web-services.nix
-        ./hosts/rpi/security.nix
-        ./hosts/rpi/dynamic-dns.nix
-        ./hosts/rpi/tailscale.nix
-        ./modules/wrapped/jj.nix
-        ./modules/wrapped/niri.nix
-        ./modules/wrapped/noctalia.nix
-        ./modules/wrapped/wezterm.nix
-        ./modules/wrapped/ghostty.nix
-        ./modules/wrapped/fish.nix
-        ./modules/wrapped/chrome.nix
-        ./modules/rustup.nix
+        (inputs.import-tree ./modules)
+        # Hardware files are NixOS modules, imported by their host configuration.
+        ((inputs.import-tree.filter (path: builtins.baseNameOf path != "hardware-configuration.nix")) ./hosts)
       ];
     };
 }

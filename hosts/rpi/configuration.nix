@@ -9,6 +9,7 @@
 
   flake.nixosModules.rpi = { config, modulesPath, ... }: {
     imports = [
+      self.nixosModules.nix-settings
       (modulesPath + "/profiles/minimal.nix")
       ./hardware-configuration.nix
       inputs.assistant.nixosModules.default
@@ -58,7 +59,6 @@
     };
     nix = {
       settings = {
-        experimental-features = [ "nix-command" "flakes" ];
         auto-optimise-store = true;
         # Collect unreferenced paths when free space falls below 1 GiB,
         # aiming to restore 3 GiB without pruning rollback generations.

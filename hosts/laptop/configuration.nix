@@ -13,6 +13,7 @@
   # You can place it in a separate file.
   flake.nixosModules.laptop = { pkgs, config, ... }: {
     imports = [
+      self.nixosModules.nix-settings
       # Include the results of the hardware scan.
       ./hardware-configuration.nix
     ];
@@ -187,10 +188,6 @@
     #   enable = true;
     #   enableSSHSupport = true;
     # };
-    nix.settings.experimental-features = [
-      "nix-command"
-      "flakes"
-    ];
 
     # List services that you want to enable:
 
