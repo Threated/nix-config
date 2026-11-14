@@ -28,7 +28,8 @@
 
     noctalia-greeter = {
       url = "github:noctalia-dev/noctalia-greeter";
-      inputs.nixpkgs.follows = "nixpkgs";
+      # Match the upstream CI derivation published to Cachix.
+      # Following our nixpkgs would change its dependencies and cache identity.
     };
 
     codex-cli-nix.url = "github:sadjow/codex-cli-nix";
