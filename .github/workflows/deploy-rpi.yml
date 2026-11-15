@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Connect to Headscale
-        uses: tailscale/github-action@v4
+        uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c # v4
         with:
           authkey: ${{ secrets.HEADSCALE_AUTHKEY }}
           args: --login-server=https://headscale.threated.dedyn.io --accept-dns=false
