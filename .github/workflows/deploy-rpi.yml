@@ -26,27 +26,23 @@ jobs:
 
       - name: Switch the Pi to this commit
         env:
-          REVISION: ${{ github.sha }}
-          DEPLOY_UNIT: nix-config-deploy-${{ github.run_id }}-${{ github.run_attempt }}
+          DEPLOY_UNIT: nix-config-deploy@${{ github.sha }}.service
         run: |
-          tailscale ssh threated@rpi.tail.threated.dedyn.io \
-            sudo -n systemd-run --unit="$DEPLOY_UNIT" --no-block \
-            --property=Type=oneshot --property=RemainAfterExit=yes \
-            --property=TimeoutStartSec=55min \
-            /run/current-system/sw/bin/rpi-deploy "$REVISION"
+          tailscale ssh rpi-ci@rpi.tail.threated.dedyn.io \
+            sudo -n systemctl restart --no-block "$DEPLOY_UNIT"
 
           deadline=$((SECONDS + 3300))
           while (( SECONDS < deadline )); do
-            if state=$(timeout 20s tailscale ssh threated@rpi.tail.threated.dedyn.io \
+            if state=$(timeout 20s tailscale ssh rpi-ci@rpi.tail.threated.dedyn.io \
               systemctl show "$DEPLOY_UNIT" --property=SubState --value); then
               case "$state" in
                 exited|failed)
-                  tailscale ssh threated@rpi.tail.threated.dedyn.io \
+                  tailscale ssh rpi-ci@rpi.tail.threated.dedyn.io \
                     sudo -n journalctl --unit="$DEPLOY_UNIT" --no-pager
                   if [ "$state" = failed ]; then
                     exit 1
                   fi
-                  tailscale ssh threated@rpi.tail.threated.dedyn.io sudo -n systemctl stop "$DEPLOY_UNIT"
+                  tailscale ssh rpi-ci@rpi.tail.threated.dedyn.io sudo -n systemctl stop "$DEPLOY_UNIT"
                   exit 0
                   ;;
               esac

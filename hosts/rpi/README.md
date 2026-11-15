@@ -27,5 +27,18 @@ before the next deployment. The workflow also supports manual runs.
 CI requires the `HEADSCALE_AUTHKEY` secret for a reusable, ephemeral Headscale
 key tagged `tag:ci`; renew it before it expires. Deployment requires both private
 repositories and stops if either is missing.
-The CI tag can connect only to TCP port 22 on the Pi. Deployment uses the
-`threated` account's existing sudo access on the Pi.
+The CI tag can connect only to TCP port 22 on the Pi and log in only as `rpi-ci`.
+This is an ordinary unprivileged account, with sudo restricted to starting,
+reading logs from, and stopping `nix-config-deploy@<SHA>.service` units. The Pi
+checks that the SHA is the current public `main` commit before rebuilding.
+Stale runs fail if `main` has advanced; the latest run deploys the new tip.
+
+`Threated@` has unrestricted network and Tailscale SSH access. Other personal
+devices have unrestricted network access to all peers and can use the Pi's
+approved exit routes, but have no Tailscale SSH authorization. Ordinary OpenSSH
+services still enforce their own key authentication. CI has a normal user shell,
+including normal user networking; it has no general administrator access.
+
+First apply the CI account change with `just deploy-rpi` using your private input
+paths before pushing the new workflow. The old running configuration cannot
+bootstrap a workflow that already expects the new account.

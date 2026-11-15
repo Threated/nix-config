@@ -5,7 +5,12 @@
   },
   "grants": [
     {
-      "src": ["autogroup:member", "tag:rpi"],
+      "src": ["Threated@"],
+      "dst": ["*"],
+      "ip": ["*"]
+    },
+    {
+      "src": ["autogroup:member"],
       "dst": ["*"],
       "ip": ["*"]
     },
@@ -20,13 +25,13 @@
       "action": "accept",
       "src": ["tag:ci"],
       "dst": ["tag:rpi"],
-      "users": ["threated"]
+      "users": ["rpi-ci"]
     },
     {
       "action": "accept",
       "src": ["Threated@"],
-      "dst": ["autogroup:self", "tag:rpi"],
-      "users": ["threated"]
+      "dst": ["autogroup:member", "autogroup:tagged"],
+      "users": ["root", "autogroup:nonroot"]
     }
   ]
 }
