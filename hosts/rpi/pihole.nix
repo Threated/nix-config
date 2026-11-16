@@ -6,6 +6,24 @@
       piholePkgs = import inputs.nixpkgs {
         system = pkgs.stdenv.hostPlatform.system;
       };
+      # nixpkgs-unstable sets passthru.src directly to originalSrc, while
+      # nixos-raspberrypi's pihole-ftl module still reads src.src.tag.
+      pihole =
+        if piholePkgs.pihole.src ? src then
+          piholePkgs.pihole
+        else
+          piholePkgs.pihole.overrideAttrs (old:
+            let
+              origSrc = old.passthru.src or old.src;
+            in
+            {
+              passthru = (old.passthru or { }) // {
+                src = origSrc // {
+                  src = origSrc;
+                };
+              };
+            }
+          );
     in
     {
       # Free port 53 for Pi-hole while keeping the host's upstream DNS usable.
@@ -16,7 +34,7 @@
       services.pihole-ftl = {
         enable = true;
         package = piholePkgs.pihole-ftl;
-        piholePackage = piholePkgs.pihole;
+        piholePackage = pihole;
         openFirewallDNS = true;
         settings = {
           dns = {
