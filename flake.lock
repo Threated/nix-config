@@ -16,22 +16,6 @@
         "type": "github"
       }
     },
-    "assistant": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "path": "./inputs/assistant",
-        "type": "path"
-      },
-      "original": {
-        "path": "./inputs/assistant",
-        "type": "path"
-      },
-      "parent": []
-    },
     "codex-cli-nix": {
       "inputs": {
         "flake-utils": "flake-utils",
@@ -101,22 +85,6 @@
         "repo": "flake-utils",
         "type": "github"
       }
-    },
-    "hue-music": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "path": "./inputs/hue-music",
-        "type": "path"
-      },
-      "original": {
-        "path": "./inputs/hue-music",
-        "type": "path"
-      },
-      "parent": []
     },
     "import-tree": {
       "locked": {
@@ -309,10 +277,8 @@
     },
     "root": {
       "inputs": {
-        "assistant": "assistant",
         "codex-cli-nix": "codex-cli-nix",
         "flake-parts": "flake-parts",
-        "hue-music": "hue-music",
         "import-tree": "import-tree",
         "nixos-raspberrypi": "nixos-raspberrypi",
         "nixpkgs": "nixpkgs_3",

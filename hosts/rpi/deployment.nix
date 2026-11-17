@@ -4,7 +4,7 @@
     let
       deploy = pkgs.writeShellApplication {
         name = "rpi-deploy";
-        runtimeInputs = with pkgs; [ coreutils git gnutar nix nixos-rebuild util-linux ];
+        runtimeInputs = with pkgs; [ coreutils git nix nixos-rebuild util-linux ];
         text = builtins.readFile ../../scripts/deploy-rpi.sh;
       };
     in
