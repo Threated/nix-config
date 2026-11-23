@@ -16,7 +16,15 @@
       services.pihole-ftl = {
         enable = true;
         package = piholePkgs.pihole-ftl;
-        piholePackage = piholePkgs.pihole;
+        # nixos-raspberrypi's pinned nixpkgs module reads piholePackage.src.src.tag,
+        # while nixpkgs-unstable flattened pihole.passthru.src to the source itself.
+        piholePackage = piholePkgs.pihole.overrideAttrs (old: {
+          passthru = old.passthru // {
+            src = old.passthru.src // {
+              src = old.passthru.src.src or old.passthru.src;
+            };
+          };
+        });
         openFirewallDNS = true;
         settings = {
           dns = {
